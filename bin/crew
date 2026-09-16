@@ -1,0 +1,27 @@
+#!/bin/sh
+# Apre una sessione Claude Code per ogni profilo in ~/.claude/crew/*.md
+# Il nome del file = nome della sessione; il contenuto = system prompt appeso.
+set -e
+d="${1:-$PWD}"
+crewdir="${CREW_DIR:-$HOME/.claude/crew}"
+
+for f in "$crewdir"/*.md; do
+  [ -e "$f" ] || { echo "crew: nessun profilo in $crewdir" >&2; exit 1; }
+  n=$(basename "$f" .md)
+  cmd="cd '$d' && claude -n '$n' --append-system-prompt-file '$f'"
+  case "$(uname -s)" in
+    Darwin)
+      osascript -e "tell app \"Terminal\" to do script \"$cmd\"" >/dev/null
+      ;;
+    *)
+      for t in "$TERMINAL" x-terminal-emulator gnome-terminal konsole kitty wezterm alacritty xterm; do
+        [ -n "$t" ] && command -v "$t" >/dev/null 2>&1 || continue
+        case "$t" in
+          gnome-terminal) "$t" -- sh -c "$cmd; exec \$SHELL" & ;;
+          *)              "$t" -e sh -c "$cmd; exec \$SHELL" & ;;
+        esac
+        break
+      done
+      ;;
+  esac
+done
