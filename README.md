@@ -6,10 +6,14 @@ finestra di terminale, tutte nella stessa directory di lavoro.
 ## Installazione
 
 ```sh
-./install.sh
+curl -fsSL https://raw.githubusercontent.com/devilteo911/crew/main/install.sh | sh
 ```
 
-Crea due symlink:
+Clona il repo in `~/.local/share/crew` (o lo aggiorna, se c'è già) e crea i
+symlink. Rilancia lo stesso comando per aggiornare. Da un clone locale basta
+`./install.sh`, che usa il clone dov'è.
+
+I due symlink:
 
 - `~/.local/bin/crew` → `bin/crew` (deve essere nel PATH)
 - `~/.claude/crew` → `prompts/`
