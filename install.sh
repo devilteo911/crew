@@ -28,3 +28,33 @@ for l in "$HOME/.local/bin/crew:$repo/bin/crew" "$HOME/.claude/crew:$repo/prompt
   ln -sfn "$target" "$link"
 done
 echo "crew $(cat "$repo/VERSION" 2>/dev/null || echo unknown) installed in $repo. Make sure ~/.local/bin is on your PATH."
+
+# Optional: a VS Code keybinding that opens the crew in split integrated
+# terminals, instead of the external ones bin/crew spawns.
+case "$(uname -s)" in
+  Darwin) kb="$HOME/Library/Application Support/Code/User/keybindings.json"; key="cmd+shift+c" ;;
+  *)      kb="$HOME/.config/Code/User/keybindings.json"; key="meta+shift+c" ;;
+esac
+
+if [ -d "$(dirname "$kb")" ] && [ -r /dev/tty ]; then
+  printf 'crew: bind %s in VS Code to open the crew in split terminals? [y/N] ' "$key"
+  read -r ans </dev/tty || ans=n
+  case "$ans" in
+    y|Y|yes|YES)
+      cmds= act=new
+      for f in "$repo"/prompts/*.md; do
+        n=$(basename "$f" .md)
+        cmds="$cmds{\"command\":\"workbench.action.terminal.$act\"},{\"command\":\"workbench.action.terminal.sendSequence\",\"args\":{\"text\":\"claude -n $n --append-system-prompt-file ~/.claude/crew/$n.md\\u000D\"}},"
+        act=split
+      done
+      entry="  { \"key\": \"$key\", \"command\": \"runCommands\", \"args\": { \"commands\": [${cmds%,}] } }"
+      if [ -s "$kb" ] && [ -n "$(tr -d '[:space:][]' <"$kb")" ]; then
+        echo "crew: $kb already has bindings, add this entry to the array yourself:"
+        echo "$entry"
+      else
+        printf '[\n%s\n]\n' "$entry" >"$kb"
+        echo "crew: $key bound in $kb"
+      fi
+      ;;
+  esac
+fi

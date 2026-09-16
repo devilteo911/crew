@@ -18,6 +18,13 @@ The two symlinks:
 - `~/.local/bin/crew` → `bin/crew` (must be on the PATH)
 - `~/.claude/crew` → `prompts/`
 
+It also asks — once, and only if VS Code is installed — whether to bind
+`cmd+shift+c` (macOS) or `meta+shift+c` (Linux/Windows: Super/Win) to open the
+crew in **split integrated terminals** instead of external windows. It writes
+the binding only if `keybindings.json` is empty; otherwise it prints the entry
+for you to paste. The binding is generated from the profiles present at the
+time, so rerun the installer after adding one.
+
 ## Usage
 
 ```sh
