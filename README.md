@@ -1,43 +1,46 @@
 # crew
 
-Apre una sessione Claude Code per ogni profilo in `prompts/`, ognuna in una
-finestra di terminale, tutte nella stessa directory di lavoro.
+Opens a Claude Code session for every profile in `prompts/`, each in its own
+terminal window, all in the same working directory.
 
-## Installazione
+## Install
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/devilteo911/crew/main/install.sh | sh
 ```
 
-Clona il repo in `~/.local/share/crew` (o lo aggiorna, se c'è già) e crea i
-symlink. Rilancia lo stesso comando per aggiornare. Da un clone locale basta
-`./install.sh`, che usa il clone dov'è.
+Clones the repo into `~/.local/share/crew` (or updates it, if it's already
+there) and creates the symlinks. Run the same command again to update. From a
+local clone just run `./install.sh`, which uses the clone where it is.
 
-I due symlink:
+The two symlinks:
 
-- `~/.local/bin/crew` → `bin/crew` (deve essere nel PATH)
+- `~/.local/bin/crew` → `bin/crew` (must be on the PATH)
 - `~/.claude/crew` → `prompts/`
 
-## Uso
+## Usage
 
 ```sh
-crew            # apre la ciurma nella directory corrente
-crew ~/progetto # ...in un'altra directory
+crew           # opens the crew in the current directory
+crew ~/project # ...in another directory
 ```
 
-## Profili
+## Profiles
 
-Un file `prompts/<nome>.md` = una sessione. Il nome del file diventa il nome
-della sessione (`claude -n <nome>`, visibile in `/resume` e in `ListAgents`),
-il contenuto viene appeso al system prompt (`--append-system-prompt-file`).
+One `prompts/<name>.md` file = one session. The file name becomes the session
+name (`claude -n <name>`, visible in `/resume` and in `ListAgents`), the
+contents are appended to the system prompt (`--append-system-prompt-file`).
 
-Aggiungere un membro significa aggiungere un `.md`: niente da toccare nello
-script.
+Adding a member means adding a `.md`: nothing to touch in the script.
 
-`CREW_DIR` sovrascrive la cartella dei profili, se serve provarne un'altra.
+`CREW_DIR` overrides the profiles directory, if you need to try another one.
 
-## Piattaforme
+The two profiles that ship with it: `sottoposto` leads and reviews, `ciurma`
+writes the code. The crew talks to itself in English; the sottoposto answers
+the user in the user's own language.
 
-macOS usa `osascript` con Terminal.app. Su Linux lo script prova `$TERMINAL`,
-poi x-terminal-emulator, gnome-terminal, konsole, kitty, wezterm, alacritty,
-xterm. Windows non è supportato.
+## Platforms
+
+macOS uses `osascript` with Terminal.app. On Linux the script tries
+`$TERMINAL`, then x-terminal-emulator, gnome-terminal, konsole, kitty,
+wezterm, alacritty, xterm. Windows is not supported.

@@ -1,12 +1,12 @@
 #!/bin/sh
-# Apre una sessione Claude Code per ogni profilo in ~/.claude/crew/*.md
-# Il nome del file = nome della sessione; il contenuto = system prompt appeso.
+# Opens a Claude Code session for every profile in ~/.claude/crew/*.md
+# File name = session name; contents = appended system prompt.
 set -e
 d="${1:-$PWD}"
 crewdir="${CREW_DIR:-$HOME/.claude/crew}"
 
 for f in "$crewdir"/*.md; do
-  [ -e "$f" ] || { echo "crew: nessun profilo in $crewdir" >&2; exit 1; }
+  [ -e "$f" ] || { echo "crew: no profiles in $crewdir" >&2; exit 1; }
   n=$(basename "$f" .md)
   cmd="cd '$d' && claude -n '$n' --append-system-prompt-file '$f'"
   case "$(uname -s)" in
