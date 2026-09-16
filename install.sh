@@ -15,6 +15,16 @@ if [ ! -f "$repo/bin/crew" ]; then
 fi
 
 mkdir -p "$HOME/.local/bin" "$HOME/.claude"
-ln -sfn "$repo/bin/crew" "$HOME/.local/bin/crew"
-ln -sfn "$repo/prompts" "$HOME/.claude/crew"
-echo "crew installato. Assicurati che ~/.local/bin sia nel PATH."
+for l in "$HOME/.local/bin/crew:$repo/bin/crew" "$HOME/.claude/crew:$repo/prompts"; do
+  link=${l%%:*}; target=${l#*:}
+  old=$(readlink "$link" 2>/dev/null) || old=
+  if [ -z "$old" ] && [ -e "$link" ]; then
+    echo "crew: $link esiste e non è un symlink, spostalo e rilancia" >&2
+    exit 1
+  fi
+  if [ -n "$old" ] && [ "$old" != "$target" ]; then
+    echo "crew: $link ora punta a $target (prima: $old)"
+  fi
+  ln -sfn "$target" "$link"
+done
+echo "crew $(cat "$repo/VERSION" 2>/dev/null || echo sconosciuta) installato in $repo. Assicurati che ~/.local/bin sia nel PATH."
