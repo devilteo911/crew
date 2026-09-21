@@ -41,11 +41,11 @@ if [ -d "$(dirname "$kb")" ] && [ -r /dev/tty ]; then
   read -r ans </dev/tty || ans=n
   case "$ans" in
     y|Y|yes|YES)
-      cmds= act=new
+      cmds= act=new wait=
       for f in "$repo"/prompts/*.md; do
         n=$(basename "$f" .md)
-        cmds="$cmds{\"command\":\"workbench.action.terminal.$act\"},{\"command\":\"workbench.action.terminal.sendSequence\",\"args\":{\"text\":\"claude -n $n --append-system-prompt-file ~/.claude/crew/$n.md\\u000D\"}},"
-        act=split
+        cmds="$cmds{\"command\":\"workbench.action.terminal.$act\"},{\"command\":\"workbench.action.terminal.sendSequence\",\"args\":{\"text\":\"${wait}claude -n $n --append-system-prompt-file ~/.claude/crew/$n.md\\u000D\"}},"
+        act=split wait='sleep 5; '
       done
       entry="  { \"key\": \"$key\", \"command\": \"runCommands\", \"args\": { \"commands\": [${cmds%,}] } }"
       if [ -s "$kb" ] && [ -n "$(tr -d '[:space:][]' <"$kb")" ]; then

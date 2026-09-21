@@ -4,11 +4,15 @@
 set -e
 d="${1:-$PWD}"
 crewdir="${CREW_DIR:-$HOME/.claude/crew}"
+# ponytail: fixed delay, not a lock. The first session may auto-update Claude Code
+# and swap the ~/.local/bin/claude symlink; sessions started in that instant get
+# "command not found". Raise the delay if an update ever takes longer.
+wait=
 
 for f in "$crewdir"/*.md; do
   [ -e "$f" ] || { echo "crew: no profiles in $crewdir" >&2; exit 1; }
   n=$(basename "$f" .md)
-  cmd="cd '$d' && claude -n '$n' --append-system-prompt-file '$f'"
+  cmd="cd '$d' && ${wait}claude -n '$n' --append-system-prompt-file '$f'"
   case "$(uname -s)" in
     Darwin)
       osascript -e "tell app \"Terminal\" to do script \"$cmd\"" >/dev/null
@@ -24,4 +28,5 @@ for f in "$crewdir"/*.md; do
       done
       ;;
   esac
+  wait='sleep 5; '
 done
