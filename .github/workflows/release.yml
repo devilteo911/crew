@@ -1,0 +1,25 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish the release for VERSION
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=$(head -n1 VERSION)
+          printf '%s\n' "$v" | grep -Eqx '[0-9]+\.[0-9]+\.[0-9]+' || { echo "VERSION must be X.Y.Z, got: $v" >&2; exit 1; }
+          if gh release view "v$v" >/dev/null 2>&1; then
+            echo "v$v is already released, nothing to do"
+          else
+            gh release create "v$v" --target "$GITHUB_SHA" --generate-notes --title "crew $v"
+          fi

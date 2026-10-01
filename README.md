@@ -64,3 +64,9 @@ has no such tracker, it falls back to a plain plan session.
 macOS uses `osascript` with Terminal.app. On Linux the script tries
 `$TERMINAL`, then x-terminal-emulator, gnome-terminal, konsole, kitty,
 wezterm, alacritty, xterm. Windows is not supported.
+
+## Releases
+
+A release ships by bumping `VERSION` on the branch: merging it to `main` tags
+`v<VERSION>` and publishes the GitHub Release. A merge without a bump creates
+nothing.
