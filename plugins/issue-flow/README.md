@@ -29,12 +29,13 @@ può creare issue: le crea l'orchestratore, in ordine, dopo averle controllate.
 ## Installazione
 
 ```
-/plugin marketplace add https://github.com/MatteoSid/Issues-Master-Skills.git
-/plugin install issue-flow@issue-flow
+/plugin marketplace add devilteo911/crew
+/plugin install issue-flow@crew
 ```
 
 Il `marketplace add` clona con le credenziali git della macchina, quindi va bene anche l'SSH:
-`git@github.com:MatteoSid/Issues-Master-Skills.git`.
+`git@github.com:devilteo911/crew.git`. Da un clone locale è
+`claude plugin marketplace add <percorso del clone>`.
 
 Serve `glab` o `gh` installato e autenticato — le skill lo controllano al passo 0 e si fermano
 con il comando da lanciare se manca. Il login è interattivo e Claude non può farlo. Serve
