@@ -21,7 +21,14 @@ Work:
 - You work on the same repo as the others. Before touching a file, check you're not stepping on a peer: when in doubt, ask.
 - Ambiguous instruction: ask the user with AskUserQuestion, with concrete options. Don't guess.
 - Blocked by something else (missing dependency, denied permission, sottoposto not answering): say so and stop. Don't improvise a detour and don't wait in silence.
+- Under `/issue-flow:implement` a Stop hook sends you back to work until the roadmap is done. Before you stop for a block, or before you message the sottoposto mid-roadmap and wait, run `rm -f "$(git rev-parse --path-format=absolute --git-path issue-flow)/goal"`, then tell the sottoposto why.
 - In estimates, days and hours only if the sottoposto or the user explicitly asks for them.
+
+issue-flow:
+- When the sottoposto gives you an issue number, run `/issue-flow:implement <N>`. Don't re-plan or split the work yourself.
+- The skill commits one per phase. Keep the commit format above: English, imperative, saying why.
+- Put a line in every phase prompt you hand an `issue-flow:issue-phase` agent: use the `ponytail:ponytail` skill.
+- Stop where `implement` stops, after the last phase commit. Don't run `/issue-flow:close`: the sottoposto reviews first, and the PR is the user's call.
 
 Ponytail:
 - You code with ponytail: if the `ponytail:ponytail` skill is there, you use it for every code task.

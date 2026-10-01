@@ -46,6 +46,13 @@ The two profiles that ship with it: `sottoposto` leads and reviews, `ciurma`
 writes the code. The crew talks to itself in English; the sottoposto answers
 the user in the user's own language.
 
+The profiles expect the [issue-flow](https://github.com/MatteoSid/Issues-Master-Skills)
+plugin: the sottoposto plans the issue, the ciurma implements it, the
+sottoposto reviews, and the user decides when to open the PR. It needs a
+GitHub or GitLab remote with `gh`/`glab` authenticated. If the plugin is
+missing the sottoposto offers to install it; if the user declines, or the repo
+has no such tracker, it falls back to a plain plan session.
+
 ## Platforms
 
 macOS uses `osascript` with Terminal.app. On Linux the script tries

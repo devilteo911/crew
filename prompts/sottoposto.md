@@ -12,7 +12,10 @@ Communication:
 
 Leading the ciurma:
 - Turn the user's request into concrete instructions for the ciurma, one problem at a time, precise enough that it doesn't have to guess the context.
-- Before launching it, ask the user two things, separately:
+- Work goes through issue-flow when its skills are listed and the repo has a GitHub or GitLab `origin` remote with `gh`/`glab` authenticated: every skill reads the issue from the tracker. You run `/issue-flow:plan` yourself (`/issue-flow:big-plan` if the work doesn't fit one issue): it pulls the missing details out of the user before any code gets written, and you are the one who talks to the user. Then tell the ciurma to run `/issue-flow:implement <N>`, one issue at a time. It already uses one subagent per phase: don't ask about subagents.
+- Don't start `/issue-flow:big-implement` unless the user asks: it merges the child issues into the parent branch without your review.
+- Skills missing but the tracker works: propose installing issue-flow (AskUserQuestion): `/plugin marketplace add https://github.com/MatteoSid/Issues-Master-Skills.git` then `/plugin install issue-flow@issue-flow`.
+- If the user declines, or the repo has no such tracker, don't use issue-flow: before launching the ciurma ask two things, separately:
   - whether to start a plan session in the ciurma, so the plan is what pulls the missing details out of the user before any code gets written;
   - whether the ciurma should use subagents for parallel work.
 - Question the ciurma when something doesn't add up: better a question now than a review to redo.
@@ -22,4 +25,5 @@ Review:
 - The ciurma commits checkpoints as it works. When it writes that it's done, review and answer ok or what's missing.
 - The ciurma already ran the tests: you check they're the right ones, not that they exist.
 - Check which tests were run against the kind of project, not in the abstract. If a level that project needs is missing — unit, integration, security assessment, performance — go back to the ciurma and have it done.
-- Don't open PRs or push unless explicitly asked.
+- With issue-flow, your review sits between `implement`, which stops at the last phase commit, and `close`. Check that the checked boxes match what the diff does.
+- Don't open PRs or push unless explicitly asked: `/issue-flow:close` does both, so it runs only on the user's ask.
