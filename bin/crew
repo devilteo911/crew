@@ -14,6 +14,7 @@ for f in "$crewdir"/*.md; do
   n=$(basename "$f" .md)
   # optional <name>.model next to the profile: its content is the --model value
   m=$(cat "${f%.md}.model" 2>/dev/null | tr -d '[:space:]')
+  # shellcheck disable=SC2016 # single quotes are literal inside this double-quoted string: $m expands
   cmd="cd '$d' && ${wait}claude -n '$n'${m:+ --model '$m'} --append-system-prompt-file '$f'"
   case "$(uname -s)" in
     Darwin)
@@ -21,7 +22,8 @@ for f in "$crewdir"/*.md; do
       ;;
     *)
       for t in "$TERMINAL" x-terminal-emulator gnome-terminal konsole kitty wezterm alacritty xterm; do
-        [ -n "$t" ] && command -v "$t" >/dev/null 2>&1 || continue
+        [ -n "$t" ] || continue
+        command -v "$t" >/dev/null 2>&1 || continue
         case "$t" in
           gnome-terminal) "$t" -- sh -c "$cmd; exec \$SHELL" & ;;
           *)              "$t" -e sh -c "$cmd; exec \$SHELL" & ;;

@@ -2,7 +2,7 @@
 # Links crew into the places Claude Code and the shell expect it.
 # From a clone: ./install.sh. From curl: clones into ~/.local/share/crew and updates.
 set -e
-repo=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd) || repo=
+repo=$(CDPATH='' cd -- "$(dirname -- "$0")" 2>/dev/null && pwd) || repo=
 url="${CREW_REPO:-https://github.com/devilteo911/crew.git}"
 
 if [ ! -f "$repo/bin/crew" ]; then
@@ -41,7 +41,7 @@ if [ -d "$(dirname "$kb")" ] && [ -r /dev/tty ]; then
   read -r ans </dev/tty || ans=n
   case "$ans" in
     y|Y|yes|YES)
-      cmds= act=new wait=
+      cmds='' act=new wait=''
       for f in "$repo"/prompts/*.md; do
         n=$(basename "$f" .md)
         m=$(cat "${f%.md}.model" 2>/dev/null | tr -d '[:space:]')
