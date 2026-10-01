@@ -52,12 +52,37 @@ The two profiles that ship with it: `sottoposto` leads and reviews, `ciurma`
 writes the code. The crew talks to itself in English; the sottoposto answers
 the user in the user's own language.
 
-The profiles expect the [issue-flow](https://github.com/MatteoSid/Issues-Master-Skills)
+The profiles expect the [issue-flow](plugins/issue-flow/)
 plugin: the sottoposto plans the issue, the ciurma implements it, the
 sottoposto reviews, and the user decides when to open the PR. It needs a
 GitHub or GitLab remote with `gh`/`glab` authenticated. If the plugin is
 missing the sottoposto offers to install it; if the user declines, or the repo
 has no such tracker, it falls back to a plain plan session.
+
+## issue-flow
+
+issue-flow lives in `plugins/issue-flow/`, imported with its history from
+https://github.com/MatteoSid/Issues-Master-Skills. The repo is a Claude Code
+marketplace named `crew` (`.claude-plugin/marketplace.json`), so one clone
+carries the launcher, the profiles and the plugin.
+
+To install it by hand:
+
+```sh
+claude plugin uninstall issue-flow@issue-flow   # only if the old marketplace's copy is installed
+claude plugin marketplace add ~/.local/share/crew   # or the path of a clone
+claude plugin install issue-flow@crew
+```
+
+The uninstall keeps the skills from appearing twice.
+
+A plugin change reaches users only with a version bump in both
+`plugins/issue-flow/.claude-plugin/plugin.json` and
+`.claude-plugin/marketplace.json`.
+
+Upstream changes come in with
+`git subtree pull --prefix=plugins/issue-flow https://github.com/MatteoSid/Issues-Master-Skills.git main`,
+merged with a merge commit, never squashed.
 
 ## Platforms
 
@@ -70,3 +95,6 @@ wezterm, alacritty, xterm. Windows is not supported.
 A release ships by bumping `VERSION` on the branch: merging it to `main` tags
 `v<VERSION>` and publishes the GitHub Release. A merge without a bump creates
 nothing.
+
+Every push and pull request runs `.github/workflows/check.yml` (shellcheck and
+`claude plugin validate --strict`); it must stay green.
