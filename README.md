@@ -40,6 +40,12 @@ contents are appended to the system prompt (`--append-system-prompt-file`).
 
 Adding a member means adding a `.md`: nothing to touch in the script.
 
+An optional `prompts/<name>.model` sets that session's model (`claude --model`):
+`sottoposto` runs on `opus`, `ciurma` on `sonnet`. No file, or an empty one,
+means Claude's default. A keybinding already in `keybindings.json` is static
+text: re-run `install.sh` and paste the entry it prints, or edit it by hand, to
+get the model flag.
+
 `CREW_DIR` overrides the profiles directory, if you need to try another one.
 
 The two profiles that ship with it: `sottoposto` leads and reviews, `ciurma`

@@ -44,7 +44,8 @@ if [ -d "$(dirname "$kb")" ] && [ -r /dev/tty ]; then
       cmds= act=new wait=
       for f in "$repo"/prompts/*.md; do
         n=$(basename "$f" .md)
-        cmds="$cmds{\"command\":\"workbench.action.terminal.$act\"},{\"command\":\"workbench.action.terminal.sendSequence\",\"args\":{\"text\":\"${wait}claude -n $n --append-system-prompt-file ~/.claude/crew/$n.md\\u000D\"}},"
+        m=$(cat "${f%.md}.model" 2>/dev/null | tr -d '[:space:]')
+        cmds="$cmds{\"command\":\"workbench.action.terminal.$act\"},{\"command\":\"workbench.action.terminal.sendSequence\",\"args\":{\"text\":\"${wait}claude -n $n${m:+ --model $m} --append-system-prompt-file ~/.claude/crew/$n.md\\u000D\"}},"
         act=split wait='sleep 5; '
       done
       entry="  { \"key\": \"$key\", \"command\": \"runCommands\", \"args\": { \"commands\": [${cmds%,}] } }"
