@@ -39,8 +39,6 @@ elif ! ( : </dev/tty ) 2>/dev/null; then
 else
   have=$(claude plugin list --json 2>/dev/null) || have=
   has() { case $have in *"\"$1\""*) return 0 ;; esac; return 1; }
-  # installed is read by the restart line, added in the next phase: drop this then.
-  # shellcheck disable=SC2034
   plugin() { # <digit> <id> <marketplace source>
     has "$2" && return 0
     case $skip in *"$1"*) return 0 ;; esac
@@ -68,6 +66,15 @@ else
     plugin 2 ponytail@ponytail DietrichGebert/ponytail
     plugin 3 caveman@caveman JuliusBrussee/caveman
   fi
+  have=$(claude plugin list --json 2>/dev/null) || have=
+  if has issue-flow@crew && has issue-flow@issue-flow; then
+    # ponytail: removing the marketplace also uninstalls its plugin, in every scope
+    # (Claude Code 2.1.286), so no separate uninstall call is needed.
+    claude plugin marketplace remove issue-flow >/dev/null &&
+      echo "crew: issue-flow@issue-flow replaced by issue-flow@crew" ||
+      echo "crew: remove the old plugin with: claude plugin marketplace remove issue-flow" >&2
+  fi
+  if [ -n "$installed" ]; then echo "crew: restart open Claude Code sessions to load the plugins"; fi
 fi
 
 # Optional: a VS Code keybinding that opens the crew in split integrated
