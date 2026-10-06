@@ -142,8 +142,15 @@ elif [ "$crew_n" -eq 1 ] && printf '%s\n' "${hit#*:}" | grep -Eq '^[[:space:]]*\
         next
       }
       { print }' "$kb" >"$tmp" &&
-    [ -s "$tmp" ] && { cat "$tmp" >"$kb"; } 2>/dev/null; then
-    echo "crew: $oldkey in $kb now runs crew run"
+    [ -s "$tmp" ]; then
+    # an entry that is already current rewrites to itself: write nothing, say nothing
+    if cmp -s "$tmp" "$kb"; then
+      :
+    elif { cat "$tmp" >"$kb"; } 2>/dev/null; then
+      echo "crew: $oldkey in $kb now runs crew run"
+    else
+      echo "crew: could not rewrite the crew entry in $kb, it still has the old one" >&2
+    fi
   else
     echo "crew: could not rewrite the crew entry in $kb, it still has the old one" >&2
   fi

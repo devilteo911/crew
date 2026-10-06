@@ -184,6 +184,16 @@ else
   echo "ok A: keybindings.json still parses (skipped: python3 is not installed)"
 fi
 
+# the entry is current now: a second run is a no-op, it neither writes the file nor says it did
+cp -p "$kb" "$t/kb.after"
+( cd "$t" && PATH="$t/bin-noclaude:$HOME/.local/bin:/usr/bin:/bin" && detach sh <"$src/install.sh" ) >"$t/a2.out" 2>"$t/a2.err"
+cmp -s "$kb" "$t/kb.after"
+check "A: a second installer run leaves keybindings.json byte-identical" $?
+if [ -n "$(find "$kb" -newer "$t/kb.after")" ]; then s=1; else s=0; fi
+check "A: a second installer run does not write keybindings.json at all" "$s"
+if grep -q 'now runs' "$t/a2.out"; then s=1; else s=0; fi
+check "A: a second installer run does not say it rewrote the entry" "$s"
+
 # =============================================================================================
 echo "== B: self-update (origin gets ciurma on haiku and a new plugin version)"
 printf 'haiku\n' >"$t/work/prompts/ciurma.model"
