@@ -47,9 +47,9 @@ else
       echo "crew: $2 installed" && installed=1 ||
       echo "crew: $2 not installed, retry with: claude plugin marketplace add $3 && claude plugin install $2" >&2
   }
-  row() { # <digit> <id> <text>
-    if has "$2"; then mark='(installed)'; else mark='[x]'; fi
-    printf '  %s) %s %s\n' "$1" "$mark" "$3"
+  row() { # <digit> <id> <text> [suffix]: the mark stays 3 chars wide so the columns line up
+    if has "$2"; then mark='[=]' sfx=' — installed'; else mark='[x]' sfx=$4; fi
+    printf '  %s) %s %s%s\n' "$1" "$mark" "$3" "$sfx"
   }
   if has issue-flow@crew && has ponytail@ponytail && has caveman@caveman; then
     echo "crew: issue-flow, ponytail and caveman already installed"
@@ -57,14 +57,15 @@ else
     repl=
     if has issue-flow@issue-flow && ! has issue-flow@crew; then repl=' — replaces issue-flow@issue-flow'; fi
     echo "crew: plugins for the crew sessions, all selected:"
-    row 1 issue-flow@crew "issue-flow   plan and implement through issues    (marketplace crew, this clone)$repl"
+    row 1 issue-flow@crew "issue-flow   plan and implement through issues    (marketplace crew, this clone)" "$repl"
     row 2 ponytail@ponytail 'ponytail     the laziest code that works          (DietrichGebert/ponytail)'
     row 3 caveman@caveman 'caveman      terse prose, fewer tokens            (JuliusBrussee/caveman)'
     printf 'crew: Enter installs the selected; type the numbers to leave out (e.g. "3"): '
-    read -r skip </dev/tty || skip=123
+    read -r skip </dev/tty || { skip=123; echo; }
     plugin 1 issue-flow@crew "$repo"
-    plugin 2 ponytail@ponytail DietrichGebert/ponytail
-    plugin 3 caveman@caveman JuliusBrussee/caveman
+    # https sources: the owner/repo shorthand tries ssh first, which can stall or fail without a GitHub key
+    plugin 2 ponytail@ponytail https://github.com/DietrichGebert/ponytail.git
+    plugin 3 caveman@caveman https://github.com/JuliusBrussee/caveman.git
   fi
   have=$(claude plugin list --json 2>/dev/null) || have=
   if has issue-flow@crew && has issue-flow@issue-flow; then

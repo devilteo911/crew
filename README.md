@@ -30,7 +30,7 @@ crew: Enter installs the selected; type the numbers to leave out (e.g. "3"):
 ```
 
 Enter installs all three; `3`, `2 3` or `23` leaves those rows out. Plugins
-already installed show `(installed)` and are left alone. An old
+already installed show `[=]` and `— installed` and are left alone. An old
 `issue-flow@issue-flow` is replaced by `issue-flow@crew`, and the `issue-flow`
 marketplace is removed so the skills don't show up twice. The menu is skipped
 without `claude` on the PATH or without a terminal: rerun the installer once
