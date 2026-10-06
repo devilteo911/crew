@@ -1,0 +1,52 @@
+{
+  "name": "issue-flow",
+  "displayName": "Issue Flow",
+  "version": "1.6.0",
+  "description": "Dalla richiesta alla merge request passando per una issue che contiene il piano e la roadmap che lo esegue; per gli sviluppi grossi, una roadmap di progetto divisa in issue eseguite in sequenza; e, prima di tutto, la proposta dei prossimi passi letta dalla documentazione del progetto. Funziona su GitLab (glab) e GitHub (gh).",
+  "author": {
+    "name": "Matteo Donato"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/MatteoSid/Issues-Master-Skills",
+  "repository": "https://github.com/MatteoSid/Issues-Master-Skills",
+  "keywords": [
+    "issue",
+    "roadmap",
+    "gitlab",
+    "github",
+    "workflow",
+    "planning"
+  ],
+  "userConfig": {
+    "default_branch": {
+      "type": "string",
+      "title": "Branch di destinazione",
+      "description": "Il branch in cui vengono unite le MR/PR. Lascia vuoto per ricavarlo dal repo con git symbolic-ref.",
+      "default": ""
+    },
+    "branch_prefix": {
+      "type": "string",
+      "title": "Prefisso dei branch di lavoro",
+      "description": "Il branch di una issue si chiama <prefisso><numero della issue>.",
+      "default": "issue-"
+    },
+    "verify_commands": {
+      "type": "string",
+      "title": "Comandi di verifica",
+      "description": "I comandi che devono passare prima di chiudere una fase, uno per riga (es. npm test, npm run lint). Vuoto: si ricavano dal progetto.",
+      "multiple": true
+    },
+    "docs_paths": {
+      "type": "string",
+      "title": "Documentazione da tenere allineata",
+      "description": "I file o le cartelle di documentazione che la fase di chiusura deve rileggere, uno per riga (es. README.md, docs/).",
+      "multiple": true
+    },
+    "figma_file": {
+      "type": "string",
+      "title": "File Figma del progetto",
+      "description": "L'id del file Figma da allineare prima del codice. Vuoto: nessuna fase Figma nelle roadmap.",
+      "default": ""
+    }
+  }
+}
