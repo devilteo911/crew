@@ -18,6 +18,25 @@ The two symlinks:
 - `~/.local/bin/crew` → `bin/crew` (must be on the PATH)
 - `~/.claude/crew` → `prompts/`
 
+Next it offers the plugins the sessions use, in one menu with all three
+selected:
+
+```
+crew: plugins for the crew sessions, all selected:
+  1) [x] issue-flow   plan and implement through issues    (marketplace crew, this clone)
+  2) [x] ponytail     the laziest code that works          (DietrichGebert/ponytail)
+  3) [x] caveman      terse prose, fewer tokens            (JuliusBrussee/caveman)
+crew: Enter installs the selected; type the numbers to leave out (e.g. "3"):
+```
+
+Enter installs all three; `3`, `2 3` or `23` leaves those rows out. Plugins
+already installed show `[=]` and `— installed` and are left alone. An old
+`issue-flow@issue-flow` is replaced by `issue-flow@crew`, and the `issue-flow`
+marketplace is removed so the skills don't show up twice. The menu is skipped
+without `claude` on the PATH or without a terminal: rerun the installer once
+you have them. Open Claude Code sessions need a restart to load what was
+installed.
+
 It also asks — once, and only if VS Code is installed — whether to bind
 `cmd+shift+c` (macOS) or `meta+shift+c` (Linux/Windows: Super/Win) to open the
 crew in **split integrated terminals** instead of external windows. It writes
@@ -55,9 +74,12 @@ the user in the user's own language.
 The profiles expect the [issue-flow](plugins/issue-flow/)
 plugin: the sottoposto plans the issue, the ciurma implements it, the
 sottoposto reviews, and the user decides when to open the PR. It needs a
-GitHub or GitLab remote with `gh`/`glab` authenticated. If the plugin is
-missing the sottoposto offers to install it; if the user declines, or the repo
-has no such tracker, it falls back to a plain plan session.
+GitHub or GitLab remote with `gh`/`glab` authenticated. The plugin ships in
+this repo (`plugins/issue-flow/`, marketplace `crew`, registered from the
+clone). If it is missing the sottoposto asks, installs it with `claude plugin`
+and asks for a restart; the ciurma does the same for ponytail and caveman. If
+the user declines, or the repo has no such tracker, it falls back to a plain
+plan session.
 
 ## issue-flow
 
