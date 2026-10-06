@@ -1,122 +1,122 @@
-# TEMPLATE — il corpo di una issue
+# TEMPLATE — the body of an issue
 
-Il titolo sta fuori dal corpo: una frase breve in minuscolo che dice cosa cambia per chi usa
-il prodotto.
+The title sits outside the body: a short sentence in lowercase that says what changes for
+whoever uses the product.
 
-Le sezioni sono queste, in quest'ordine, tutte obbligatorie tranne dove detto. Il testo
-fra parentesi quadre è istruzione per chi scrive e non va copiato.
+The sections are these, in this order, all mandatory except where stated. The text
+in square brackets is an instruction for the writer and must not be copied.
 
-La issue vive su **una** piattaforma: dove il template dà due varianti — GitLab e GitHub —
-ne copi una sola, quella del repo, e usi la sua parola (merge request o pull request) senza
-barre. Quale sia lo dice `TRACKER.md`.
+The issue lives on **one** platform: where the template gives two variants — GitLab and GitHub —
+you copy only one, the repo's, and use its word (merge request or pull request) with no
+slashes. Which one it is, `TRACKER.md` says.
 
 ---
 
-- **Stato:** da fare
-- **Branch previsto:** `issue-<numero>`
-- **Roadmap:** #<numero della madre>   [solo per le figlie di `/issue-flow:big-plan`]
-- **Dipende da:** #<numero>            [solo per le figlie, una riga per sorella da cui dipende]
+- **Status:** to do
+- **Planned branch:** `issue-<number>`
+- **Roadmap:** #<mother>   [only for children of `/issue-flow:big-plan`]
+- **Depends on:** #<number>            [only for children, one line per sibling it depends on]
 
-## Obiettivo
+## Goal
 
-[Due o tre paragrafi. Il primo dice cosa succede oggi e perché non basta — concreto, con il
-riferimento al codice che produce quel comportamento. L'ultimo dice, in una frase sola, cosa
-succederà dopo. Niente elenco di file: quello viene dopo.]
+[Two or three paragraphs. The first says what happens today and why it is not enough — concrete,
+with the reference to the code that produces that behaviour. The last says, in a single sentence,
+what will happen afterwards. No list of files: that comes later.]
 
-## Contesto
+## Context
 
-[La parte che rende la issue eseguibile da chi non ha assistito alla conversazione. Sono
-paragrafi con un **titolo in grassetto** ciascuno, uno per fatto scoperto in ricognizione.
-Ci vanno, quando esistono:]
+[The part that makes the issue executable by someone who did not attend the conversation. These are
+paragraphs, each with a **bold title**, one per fact discovered in reconnaissance.
+These go in, when they exist:]
 
-**Quanto materiale c'è.** [I numeri misurati, con detto dove: «847 righe in `src/store.ts`»,
-«la funzione ha 23 chiamanti», «copertura sui record esistenti: 886 su 886».]
+**How much material there is.** [The measured numbers, saying where: "847 lines in `src/store.ts`",
+"the function has 23 callers", "coverage on existing records: 886 of 886".]
 
-**Cosa c'è già e non stiamo usando.** [Campi che arrivano fino all'interfaccia e non vengono
-mostrati, dati calcolati e poi buttati via. È quasi sempre la parte che riduce il lavoro.]
+**What is already there and we are not using.** [Fields that reach the interface and are not
+shown, data computed and then thrown away. It is almost always the part that reduces the work.]
 
-**Il vincolo tecnico non ovvio.** [Il tipo che una serializzazione non digerisce, la cache che
-si invaliderebbe, l'import che creerebbe un ciclo, il campo speculare fra backend e frontend
-che va cambiato insieme. Con il perché, non solo il cosa.]
+**The non-obvious technical constraint.** [The type a serialization does not digest, the cache that
+would be invalidated, the import that would create a cycle, the mirrored field between backend and frontend
+that must be changed together. With the why, not just the what.]
 
-**Compatibilità con quello che esiste già.** [Quali dati, risposte in cache o client vecchi
-devono continuare a funzionare, e cosa mostreranno.]
+**Compatibility with what already exists.** [Which data, cached responses or old clients
+must keep working, and what they will show.]
 
-**Cosa resta com'è, e perché.** [Il codice adiacente che si è tentati di sistemare e che
-questa issue non tocca — con il motivo per cui non lo tocca.]
+**What stays as it is, and why.** [The adjacent code one is tempted to fix and that
+this issue does not touch — with the reason it does not touch it.]
 
-## Piano
+## Plan
 
-[Le fasi. Ognuna è un `###`, con un titolo che dice cosa fa, e sotto: una riga che nomina i
-file toccati, poi le checkbox. Le fasi obbligate — verifica in penultima, chiusura per ultima,
-e il Figma per primo se il progetto ne ha uno configurato — sono descritte in `SKILL.md`.]
+[The phases. Each one is a `###`, with a title that says what it does, and under it: a line naming the
+touched files, then the checkboxes. The mandatory phases — verification second to last, closing last,
+and the Figma first if the project has one configured — are described in `SKILL.md`.]
 
-### Fase 1 — [titolo]
+### Phase 1 — [title]
 
-`percorso/del/file.ts`.
+`path/to/file.ts`.
 
-- [ ] [checkbox atomiche, imperative, che nominano file e riga]
+- [ ] [atomic, imperative checkboxes that name file and line]
 
-**Fatto quando:** [l'osservazione che prova che la fase è finita.]
+**Done when:** [the observation that proves the phase is finished.]
 
-[...le altre fasi...]
+[...the other phases...]
 
-### Fase N-1 — Verifica
+### Phase N-1 — Verification
 
-- [ ] [i test nuovi, detti per quello che devono provare, non per come si chiamano]
-- [ ] [i comandi di verifica del progetto, uno per checkbox, con detto quale esito ci si
-      aspetta: «`npm test` verde, i 214 test di prima continuano a passare»]
-- [ ] [la prova a mano: cosa si apre, cosa si fa, cosa si deve vedere — in concreto]
-- [ ] [se tocca l'interfaccia: da tastiera, a 390 di larghezza, accessibilità pulita]
-- [ ] [se ci sono dati o client vecchi: uno di quelli si rilegge senza errori]
+- [ ] [the new tests, described by what they must prove, not by what they are called]
+- [ ] [the project's verification commands, one per checkbox, saying which outcome is
+      expected: "`npm test` green, the 214 tests from before still pass"]
+- [ ] [the manual check: what to open, what to do, what must be seen — concretely]
+- [ ] [if it touches the interface: from the keyboard, at 390 width, clean accessibility]
+- [ ] [if there is old data or clients: one of them is re-read without errors]
 
-### Fase N — Chiusura
+### Phase N — Closing
 
-- [ ] `<file di documentazione>`: [cosa va riscritto, non «aggiornare la doc»]
-- [ ] commit sul branch della issue
+- [ ] `<documentation file>`: [what must be rewritten, not "update the docs"]
+- [ ] commit on the issue's branch
 
-[La MR/PR non va messa fra le checkbox: la apre `/issue-flow:close <numero>` dopo l'ultima
-fase, e non la si merga — il merge lo chiede l'utente.]
+[The MR/PR does not go among the checkboxes: `/issue-flow:close <number>` opens it after the last
+phase, and it is not merged — the user asks for the merge.]
 
-## Come si aggiorna questa roadmap
+## How to update this roadmap
 
-[Sezione obbligatoria, si copia com'è.]
+[Mandatory section, copied as is.]
 
-Le caselle qui sopra sono spuntabili: il tracker le conta e mostra l'avanzamento in testa
-alla issue. **Vanno spuntate mano a mano**, alla fine di ogni pezzo di lavoro e non a lavoro
-finito, nello stesso commit che porta quel pezzo. Chi riprende in mano la issue deve poter
-capire dallo stato delle caselle a che punto è, senza chiedere a nessuno.
+The boxes above can be ticked: the tracker counts them and shows the progress at the top
+of the issue. **Tick them as you go**, at the end of each piece of work and not when everything
+is done, in the same commit that carries that piece. Whoever picks the issue up must be able to
+tell from the state of the boxes where it stands, without asking anyone.
 
-Se durante l'implementazione una decisione cambia, si riscrive la riga della roadmap invece
-di spuntarla e basta: una roadmap che mente è peggio di nessuna roadmap.
+If a decision changes during implementation, rewrite the roadmap line instead
+of just ticking it: a roadmap that lies is worse than no roadmap.
 
-Da riga di comando, rileggendo sempre la versione sul server prima di riscriverla — l'update
-sostituisce l'intero corpo e non fa merge:
+From the command line, always re-reading the version on the server before rewriting it — the update
+replaces the whole body and does not merge:
 
-[Copia solo il blocco della piattaforma di questo repo.]
+[Copy only the block for this repo's platform.]
 
 ```bash
 # GitLab
-glab issue view <numero> --output json --jq '.description' > roadmap.md
-glab issue update <numero> --description-file roadmap.md
+glab issue view <number> --output json --jq '.description' > roadmap.md
+glab issue update <number> --description-file roadmap.md
 ```
 
 ```bash
 # GitHub
-gh issue view <numero> --json body --jq '.body' > roadmap.md
+gh issue view <number> --json body --jq '.body' > roadmap.md
 sed -i 's/\r$//' roadmap.md
-gh issue edit <numero> --body-file roadmap.md
+gh issue edit <number> --body-file roadmap.md
 ```
 
-A lavoro finito: tutte le caselle spuntate, poi `/issue-flow:close <numero>` apre la merge
-request — la pull request su GitHub — e porta lo **Stato:** a `in revisione — !<numero MR>` su
-GitLab, `in revisione — #<numero PR>` su GitHub. A merge avvenuto,
-`glab issue close <numero>` o `gh issue close <numero>`, e lo **Stato:** diventa
-`chiusa — unita il GG/MM/AAAA`. Su GitHub la issue può essersi già chiusa da sola: la PR porta
-`Closes #<numero>` e il merge la chiude.
+When the work is done: all the boxes ticked, then `/issue-flow:close <number>` opens the merge
+request — the pull request on GitHub — and sets **Status:** to `in review — !<MR number>` on
+GitLab, `in review — #<PR number>` on GitHub. After the merge,
+`glab issue close <number>` or `gh issue close <number>`, and **Status:** becomes
+`closed — merged on DD/MM/YYYY`. On GitHub the issue may have already closed by itself: the PR carries
+`Closes #<number>` and the merge closes it.
 
-## Fuori perimetro
+## Out of scope
 
-[Elenco puntato di quello che questa issue **non** fa, con il perché. Ci vanno soprattutto le
-cose che sarebbero poco lavoro e che qualcuno potrebbe aggiungere di sua iniziativa: dirle
-qui è il modo per non farsele trovare implementate.]
+[Bulleted list of what this issue **does not** do, with the why. It especially includes the
+things that would be little work and that someone might add on their own initiative: saying them
+here is the way not to find them implemented.]
