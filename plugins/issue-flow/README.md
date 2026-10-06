@@ -1,151 +1,171 @@
 # Issue Flow
 
-Dalla richiesta alla merge request passando per una issue che contiene il piano **e** la
-roadmap che lo esegue. Sei skill che si passano il lavoro, su **GitLab** (`glab`) o **GitHub**
-(`gh`) indifferentemente: la piattaforma si deduce dal remote.
+From the request to the merge request, by way of an issue that holds the plan **and** the
+roadmap that carries it out. Six skills that hand the work to one another, on **GitLab** (`glab`)
+or **GitHub** (`gh`) alike: the platform is deduced from the remote.
 
-Il principio che tiene insieme tutto: *la issue deve essere eseguibile da un agente che non ha
-assistito alla conversazione.* Da lì discendono i riferimenti `file.ts:42` verificati, i numeri
-misurati e non stimati, le decisioni scritte con la loro motivazione, il fuori perimetro
-esplicito.
+The principle that holds it all together: *the issue must be executable by an agent that did not
+attend the conversation.* From it follow the verified `file.ts:42` references, the numbers
+measured rather than estimated, the decisions written down with their reasons, the explicit
+out of scope.
 
-| skill | cosa fa |
+| skill | what it does |
 |---|---|
-| `/issue-flow:roadmap` | **cosa facciamo adesso**: legge la documentazione del progetto — i registri di [research-flow](https://github.com/MatteoSid/Research-Master-Skills) se ci sono, se no README, CLAUDE.md, docs — più le issue aperte e il codice, e propone i prossimi passi con le loro fonti; approvata, la salva in `ROADMAP.md` o ne crea le issue con `big-plan` |
-| `/issue-flow:plan` | **una feature**: ricognizione nel codice, bivi chiesti all'utente, poi apre la issue con dentro piano e roadmap a checkbox |
-| `/issue-flow:big-plan` | **uno sviluppo grosso**: definisce la roadmap del progetto in una issue madre e la divide in issue figlie, ognuna scritta completa da un subagent |
-| `/issue-flow:implement` | esegue la roadmap una fase per subagent, spunta le caselle mano a mano, un commit per fase; lavora come un `/goal` e non si ferma finché la roadmap non è completa; sulla madre prende la prima figlia aperta |
-| `/issue-flow:big-implement` | porta avanti tutte le figlie di una madre in una volta sul branch della madre: una alla volta, in ordine, ognuna affidata a un subagent che fa il giro di `implement` e di `close`, che la unisce da sola nel branch della madre; alla fine apre la MR/PR della madre, che unisci tu |
-| `/issue-flow:close` | verifica l'albero finale, apre la MR/PR, e a merge avvenuto chiude la issue e la spunta sulla madre; la figlia di un progetto con il branch della madre la unisce lì da sola |
+| `/issue-flow:roadmap` | **what do we do now**: reads the project's documentation — the [research-flow](https://github.com/MatteoSid/Research-Master-Skills) registers if there are any, otherwise README, CLAUDE.md, docs — plus the open issues and the code, and proposes the next steps with their sources; once approved, it saves them in `ROADMAP.md` or creates their issues with `big-plan` |
+| `/issue-flow:plan` | **one feature**: code reconnaissance, design forks put to the user, then opens the issue with the plan and a checkbox roadmap inside |
+| `/issue-flow:big-plan` | **a large development**: defines the project roadmap in a mother issue and splits it into child issues, each written complete by a subagent |
+| `/issue-flow:implement` | runs the roadmap one phase per subagent, ticks the boxes as it goes, one commit per phase; works like a `/goal` and does not stop until the roadmap is complete; on a mother issue it takes the first open child |
+| `/issue-flow:big-implement` | runs all the children of a mother in one go on the mother's branch: one at a time, in order, each handed to a subagent that goes through `implement` and `close` and merges it into the mother branch on its own; at the end it opens the mother's MR/PR, which you merge |
+| `/issue-flow:close` | verifies the final tree, opens the MR/PR, and once merged closes the issue and ticks it on the mother; a child of a project with a mother branch is merged there on its own |
 
-Più tre subagent: `issue-flow:issue-phase`, che esegue una singola fase e non può committare né
-toccare la issue — quello lo fa l'orchestratore, dopo aver verificato l'output vero —;
-`issue-flow:issue-runner`, che per `big-implement` porta una figlia dal branch al merge nel
-branch della madre, orchestrandone le fasi con un `issue-phase` ciascuna, così il contesto della
-sessione principale resta quello del progetto e non si riempie delle fasi di tutte le figlie; e
-`issue-flow:issue-writer`, che scrive il corpo di una issue figlia di `big-plan` in un file e non
-può creare issue: le crea l'orchestratore, in ordine, dopo averle controllate.
+Plus three subagents: `issue-flow:issue-phase`, which runs a single phase and can neither commit
+nor touch the issue — the orchestrator does that, after checking the real output —;
+`issue-flow:issue-runner`, which for `big-implement` takes a child from its branch to the merge
+into the mother branch, orchestrating its phases with one `issue-phase` each, so the main
+session's context stays the project's and does not fill up with the phases of every child; and
+`issue-flow:issue-writer`, which writes the body of a `big-plan` child issue into a file and
+cannot create issues: the orchestrator creates them, in order, after checking them.
 
-## Installazione
+## Installation
 
 ```
 /plugin marketplace add devilteo911/crew
 /plugin install issue-flow@crew
 ```
 
-Il `marketplace add` clona con le credenziali git della macchina, quindi va bene anche l'SSH:
-`git@github.com:devilteo911/crew.git`. Da un clone locale è
-`claude plugin marketplace add <percorso del clone>`.
+The `marketplace add` clones with the machine's git credentials, so SSH works too:
+`git@github.com:devilteo911/crew.git`. From a local clone it is
+`claude plugin marketplace add <path to the clone>`.
 
-Serve `glab` o `gh` installato e autenticato — le skill lo controllano al passo 0 e si fermano
-con il comando da lanciare se manca. Il login è interattivo e Claude non può farlo. Serve
-anche `jq`, che usa l'hook di `implement`.
+`glab` or `gh` must be installed and authenticated — the skills check this at step 0 and stop
+with the command to run if it is missing. The login is interactive and Claude cannot do it.
+`jq` is also needed, which the `implement` hook uses.
 
-## Configurazione
+## Configuration
 
-Tutte le opzioni sono facoltative: senza, le skill ricavano quello che serve dal repo. Si
-impostano quando abiliti il plugin, o con `claude plugin install --config chiave=valore`.
+All options are optional: without them, the skills derive what they need from the repo. They are
+set when you enable the plugin, or with `claude plugin install --config key=value`.
 
-| opzione | default | a cosa serve |
+| option | default | what it is for |
 |---|---|---|
-| `default_branch` | dal repo | il branch in cui vengono unite le MR/PR |
-| `branch_prefix` | `issue-` | il branch di lavoro è `<prefisso><numero della issue>` |
-| `verify_commands` | dal progetto | i comandi che devono passare prima di chiudere una fase |
-| `docs_paths` | dal progetto | la documentazione che la fase di chiusura rilegge |
-| `figma_file` | vuoto | l'id del file Figma da allineare prima del codice; vuoto = nessuna fase Figma |
+| `default_branch` | from the repo | the branch the MRs/PRs are merged into |
+| `branch_prefix` | `issue-` | the working branch is `<prefix><issue number>` |
+| `verify_commands` | from the project | the commands that must pass before a phase is closed |
+| `docs_paths` | from the project | the documentation that the closing phase re-reads |
+| `figma_file` | empty | the id of the Figma file to align before the code; empty = no Figma phase |
 
-Quando `verify_commands` e `docs_paths` non sono impostati, `/issue-flow:plan` li ricava in
-ricognizione — script di `package.json`, target del `Makefile`, `pyproject.toml`, job della CI
-— e li **scrive nella issue**, così la fase di verifica ha comandi veri invece di un generico
-«esegui i test». Se il progetto ha un `CLAUDE.md`, di solito li dice già.
+When `verify_commands` and `docs_paths` are not set, `/issue-flow:plan` derives them during the
+reconnaissance — `package.json` scripts, `Makefile` targets, `pyproject.toml`, CI jobs — and
+**writes them into the issue**, so the verification phase has real commands instead of a generic
+"run the tests". If the project has a `CLAUDE.md`, it usually says them already.
 
-## Come si lavora
+## How to work
 
-Per sapere da dove ripartire:
-
-```
-/issue-flow:roadmap                  →  propone i prossimi passi, ognuno con la sua fonte
-                                        approvata: ROADMAP.md nella radice, oppure
-                                        big-plan ne fa la madre e una figlia per passo
-/issue-flow:roadmap il frontend      →  solo i passi di un'area o di un traguardo
-```
-
-`roadmap` legge i registri di research-flow quando il repo ha `.research-flow.json` — lo stato
-del progetto, i TODO aperti, gli esperimenti proposti, le ipotesi da verificare — ma research-flow
-non è un requisito: senza, si basa su `ROADMAP.md` precedente, `CLAUDE.md`, `README.md`, i
-`docs_paths` e le issue aperte. Ogni passo cita la fonte da cui viene; quello che la
-documentazione non dice e `roadmap` propone di suo è segnato come tale. L'orizzonte si ferma al
-primo bivio che dipende da un esito non ancora noto: oltre, i due rami in una riga.
-
-Per una feature:
+To know where to pick up from:
 
 ```
-/issue-flow:plan aggiungere il filtro per data alla lista        →  apre la issue #12
-/issue-flow:implement 12                                         →  branch issue-12, un commit per fase
-/issue-flow:close 12                                             →  apre la MR/PR
-/issue-flow:close 12 --chiudi                                    →  a merge avvenuto, chiude la issue
+/issue-flow:roadmap                  →  proposes the next steps, each with its source
+                                        once approved: ROADMAP.md in the root, or
+                                        big-plan makes the mother and one child per step
+/issue-flow:roadmap the frontend     →  only the steps of one area or milestone
 ```
 
-Per uno sviluppo che non sta in una issue:
+`roadmap` reads the research-flow registers when the repo has `.research-flow.json` — the
+project's state, the open TODOs, the proposed experiments, the hypotheses to verify — but
+research-flow is not a requirement: without it, it relies on a previous `ROADMAP.md`,
+`CLAUDE.md`, `README.md`, the `docs_paths` and the open issues. Every step cites the source it
+comes from; what the documentation does not say and `roadmap` proposes on its own is marked as
+such. The horizon stops at the first fork that depends on an outcome not yet known: beyond it,
+the two branches in one line.
+
+For a feature:
 
 ```
-/issue-flow:big-plan sistema di notifiche con preferenze utente  →  madre #20, figlie #21 #22 #23
-/issue-flow:implement 20                                         →  prende la prima figlia aperta, #21
-/issue-flow:close 21                                             →  apre la MR/PR di #21
-/issue-flow:close 21 --chiudi                                    →  chiude #21 e la spunta su #20
-/issue-flow:implement 20                                         →  ora tocca a #22, e così via
+/issue-flow:plan add a date filter to the list                   →  opens issue #12
+/issue-flow:implement 12                                         →  branch issue-12, one commit per phase
+/issue-flow:close 12                                             →  opens the MR/PR
+/issue-flow:close 12 --merged                                    →  once merged, closes the issue
 ```
 
-Le figlie si eseguono una alla volta, ognuna con il suo branch e la sua MR/PR, e ognuna parte
-dal branch di destinazione con dentro le precedenti già unite. Oppure tutte in una volta, senza
-aspettare i merge:
+For a development that does not fit in one issue:
 
 ```
-/issue-flow:big-implement 20      →  branch issue-20 da main; #21, #22, #23 nascono da issue-20
-                                     e ci rientrano da sole; poi la MR/PR issue-20 → main
-/issue-flow:close 20 --chiudi     →  dopo che hai unito la MR/PR della madre: chiude #20
+/issue-flow:big-plan notification system with user preferences   →  mother #20, children #21 #22 #23
+/issue-flow:implement 20                                         →  takes the first open child, #21
+/issue-flow:close 21                                             →  opens the MR/PR of #21
+/issue-flow:close 21 --merged                                    →  closes #21 and ticks it on #20
+/issue-flow:implement 20                                         →  now it is #22's turn, and so on
 ```
 
-Ogni figlia passa per `close` come sempre — verifica sull'albero finale, documentazione, MR/PR —
-ma verso il branch della madre, e lì il plugin la unisce da solo: è il cantiere del progetto,
-non il prodotto. Al branch di destinazione arriva solo la MR/PR della madre, e quella non la
-unisce mai il plugin: la approvi e la unisci tu. Non serve sapere in anticipo quale
-delle due usare: `/issue-flow:plan` controlla sempre se la richiesta sta in una issue, e quando
-non ci sta si ferma, avvisa con i numeri misurati e una bozza di divisione, e propone come
-proseguire — passare a `big-plan` (che riparte dalla ricognizione già fatta), aprire solo la
-prima issue, restringere il perimetro, o tenere comunque una issue sola.
+The children are run one at a time, each with its own branch and its own MR/PR, and each starts
+from the target branch with the previous ones already merged. Or all at once, without waiting
+for the merges:
 
-Ognuna riparte da sola dopo un `/clear`: lo stato sta nelle checkbox della issue, non nella
-conversazione. `/issue-flow:implement` senza numero lo deduce dal branch corrente.
+```
+/issue-flow:big-implement 20      →  branch issue-20 from main; #21, #22, #23 are born from issue-20
+                                     and merge back into it on their own; then the MR/PR issue-20 → main
+/issue-flow:close 20 --merged     →  after you have merged the mother's MR/PR: closes #20
+```
 
-`/issue-flow:implement` e `/issue-flow:big-implement` non hanno bisogno di `/goal`: portano con
-sé un hook `Stop` (`scripts/goal-stop.sh`) che a ogni fine turno rilegge la issue dal tracker e rimanda al
-lavoro finché nel Piano resta una casella aperta o l'ultima fase non è committata. Si ferma
-prima solo per una decisione esplicita — una fase fallita due volte, una scelta che la issue
-non ha preso — e lo dice. Con `big-implement` il goal copre tutte le figlie del progetto e la madre, fino all'ultimo
-merge nel branch della madre. Lo
-stato del goal sta in `.git/issue-flow/`, fuori dai commit.
+Every child goes through `close` as usual — verification on the final tree, documentation,
+MR/PR — but towards the mother's branch, and there the plugin merges it on its own: it is the
+project's worksite, not the product. Only the mother's MR/PR reaches the target branch, and the
+plugin never merges that one: you approve it and merge it. You do not need to know in advance
+which of the two to use: `/issue-flow:plan` always checks whether the request fits in one issue,
+and when it does not it stops, warns with the measured numbers and a draft split, and proposes
+how to proceed — switch to `big-plan` (which restarts from the reconnaissance already done),
+open only the first issue, narrow the scope, or keep a single issue anyway.
 
-## Le tre regole che il plugin non negozia
+Each one picks up on its own after a `/clear`: the state lives in the issue's checkboxes, not in
+the conversation. `/issue-flow:implement` without a number infers it from the current branch.
 
-**Si spunta mano a mano.** Alla fine di ogni fase, nello stesso commit che la porta — non a
-lavoro finito. Una roadmap che non dice il proprio stato non serve a niente, e una che mente
-è peggio di nessuna roadmap: se una decisione cambia, si riscrive la riga invece di spuntarla.
+`/issue-flow:implement` and `/issue-flow:big-implement` do not need `/goal`: they carry a `Stop`
+hook (`scripts/goal-stop.sh`) that at every turn end re-reads the issue from the tracker and
+sends the work back on as long as the `## Plan` section has an unchecked box or the last phase
+is not committed. They stop earlier only for an explicit decision — a phase that failed twice, a
+choice the issue did not make — and say so. With `big-implement` the goal covers all the
+children of the project and the mother, up to the last merge into the mother branch. The goal's
+state lives in `.git/issue-flow/` (the files `goal`, `in-flight` and `blocks`), outside the
+commits.
 
-**Il corpo si rilegge dal server prima di riscriverlo.** L'update sostituisce l'intero campo e
-non fa merge: partire da una copia tenuta in conversazione cancella le caselle che qualcuno ha
-spuntato dalla pagina nel frattempo.
+## The three rules the plugin does not negotiate
 
-**La MR/PR si apre e non si merga.** Il merge lo chiede l'utente, sempre — nemmeno con le
-pipeline verdi.
+**Tick as you go.** At the end of each phase, in the same commit that carries it — not when the
+work is done. A roadmap that does not say its own state is useless, and one that lies is worse
+than no roadmap: if a decision changes, rewrite the line instead of ticking it.
 
-## GitLab e GitHub
+**Re-read the body from the server before rewriting it.** The update replaces the whole field
+and does not merge: starting from a copy kept in the conversation wipes the boxes that someone
+ticked from the page in the meantime.
 
-`TRACKER.md`, nella cartella del plugin, ha la corrispondenza completa dei comandi e le
-differenze che mordono: il campo del corpo che si chiama `description` di qua e `body` di là,
-il `--limit` di `gh issue list` fermo a 30, `task_completion_status` che esiste solo su GitLab,
-i CRLF nei corpi scritti dalla web di GitHub, `gh pr create` che non ha `--related-issue`.
+**The MR/PR is opened, not merged.** The merge is requested by the user, always — not even with
+green pipelines.
 
-## Licenza
+## Language
+
+Issue bodies, merge/pull request bodies and `ROADMAP.md` are written in English, whatever language the chat is in. With the user — summaries, questions, AskUserQuestion options, the delivery message — you talk in the language of the current chat.
+
+## 2.0.0
+
+2.0.0 is the English release: every file of the plugin is in English, and so are the markers the
+skills write into issues. Renamed: the issue header (`**Status:**`, `**Type:**`,
+`**Planned branch:**`, `**Depends on:**`), the section names (`## Goal`, `## Context`, `## Plan`,
+`## Out of scope`; for a mother `## Architecture`, `## Decisions`, `## Issues`,
+`## How to proceed`), the phase headings (`### Phase N`, `**Done when:**`), the status values
+(`to do`, `in progress — phase N of M`, `closed — merged on DD/MM/YYYY`, …), the arguments
+(`close <n> --merged`, `plan check <n>`, `plan revise <n>`, `implement <n> --from N`) and two
+of the hook's state files (`in-flight`, `blocks`; `goal` keeps its name). The plugin, skill and
+agent names do not change. Issues and commands written for 1.x keep working: the Italian markers
+and argument spellings are still read and accepted, and `TRACKER.md` §6 has the table with both
+forms. The plugin only ever writes the English ones.
+
+## GitLab and GitHub
+
+`TRACKER.md`, in the plugin folder, has the full command mapping and the differences that bite:
+the body field that is called `description` here and `body` there, the `--limit` of
+`gh issue list` stuck at 30, `task_completion_status` that exists only on GitLab, the CRLFs in
+bodies written from GitHub's web UI, `gh pr create` that has no `--related-issue`.
+
+## License
 
 MIT.
