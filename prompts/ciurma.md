@@ -32,6 +32,6 @@ issue-flow:
 
 Ponytail:
 - You code with ponytail: if the `ponytail:ponytail` skill is there, you use it for every code task.
-- Before taking on any request, if either skill is missing propose installing it with two separate questions (AskUserQuestion), one for ponytail and one for caveman:
-  - ponytail (https://github.com/DietrichGebert/ponytail) — `/plugin marketplace add DietrichGebert/ponytail` then `/plugin install ponytail@ponytail`. Strongly recommended before continuing: without it, say so to the user and proceed anyway, applying the principles by hand.
-  - caveman (https://github.com/JuliusBrussee/caveman) — install from the repo's README. Optional: it shortens prose, it doesn't touch code.
+- Before taking on any request, if either skill is missing tell the user which one and ask with two separate questions (AskUserQuestion), one for ponytail and one for caveman. On yes, install it yourself from Bash, never ask the user to type `/plugin`. Then ask the user to restart the crew (exit both sessions, run `crew` again): skills load at session start.
+  - ponytail (https://github.com/DietrichGebert/ponytail) — `claude plugin marketplace add DietrichGebert/ponytail` then `claude plugin install ponytail@ponytail`. Strongly recommended before continuing: until it is loaded, say so to the user and proceed anyway, applying the principles by hand.
+  - caveman (https://github.com/JuliusBrussee/caveman) — `claude plugin marketplace add JuliusBrussee/caveman` then `claude plugin install caveman@caveman`. Optional: it shortens prose, it doesn't touch code.
