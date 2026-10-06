@@ -1,6 +1,7 @@
 #!/bin/sh
 # Links crew into the places Claude Code and the shell expect it.
 # From a clone: ./install.sh. From curl: clones into ~/.local/share/crew and updates.
+# It also offers the plugins the crew uses: issue-flow, ponytail and caveman.
 set -e
 repo=$(CDPATH='' cd -- "$(dirname -- "$0")" 2>/dev/null && pwd) || repo=
 url="${CREW_REPO:-https://github.com/devilteo911/crew.git}"
@@ -28,6 +29,46 @@ for l in "$HOME/.local/bin/crew:$repo/bin/crew" "$HOME/.claude/crew:$repo/prompt
   ln -sfn "$target" "$link"
 done
 echo "crew $(cat "$repo/VERSION" 2>/dev/null || echo unknown) installed in $repo. Make sure ~/.local/bin is on your PATH."
+
+# Plugins the crew sessions rely on, one menu. Needs claude and a terminal.
+installed=
+if ! command -v claude >/dev/null 2>&1; then
+  echo "crew: claude is not on the PATH, plugins skipped (rerun install.sh once it is)"
+elif ! ( : </dev/tty ) 2>/dev/null; then
+  echo "crew: no terminal, plugins skipped (rerun install.sh from one)"
+else
+  have=$(claude plugin list --json 2>/dev/null) || have=
+  has() { case $have in *"\"$1\""*) return 0 ;; esac; return 1; }
+  # installed is read by the restart line, added in the next phase: drop this then.
+  # shellcheck disable=SC2034
+  plugin() { # <digit> <id> <marketplace source>
+    has "$2" && return 0
+    case $skip in *"$1"*) return 0 ;; esac
+    claude plugin marketplace add "$3" >/dev/null &&
+      claude plugin install "$2" >/dev/null &&
+      echo "crew: $2 installed" && installed=1 ||
+      echo "crew: $2 not installed, retry with: claude plugin marketplace add $3 && claude plugin install $2" >&2
+  }
+  row() { # <digit> <id> <text>
+    if has "$2"; then mark='(installed)'; else mark='[x]'; fi
+    printf '  %s) %s %s\n' "$1" "$mark" "$3"
+  }
+  if has issue-flow@crew && has ponytail@ponytail && has caveman@caveman; then
+    echo "crew: issue-flow, ponytail and caveman already installed"
+  else
+    repl=
+    if has issue-flow@issue-flow && ! has issue-flow@crew; then repl=' — replaces issue-flow@issue-flow'; fi
+    echo "crew: plugins for the crew sessions, all selected:"
+    row 1 issue-flow@crew "issue-flow   plan and implement through issues    (marketplace crew, this clone)$repl"
+    row 2 ponytail@ponytail 'ponytail     the laziest code that works          (DietrichGebert/ponytail)'
+    row 3 caveman@caveman 'caveman      terse prose, fewer tokens            (JuliusBrussee/caveman)'
+    printf 'crew: Enter installs the selected; type the numbers to leave out (e.g. "3"): '
+    read -r skip </dev/tty || skip=123
+    plugin 1 issue-flow@crew "$repo"
+    plugin 2 ponytail@ponytail DietrichGebert/ponytail
+    plugin 3 caveman@caveman JuliusBrussee/caveman
+  fi
+fi
 
 # Optional: a VS Code keybinding that opens the crew in split integrated
 # terminals, instead of the external ones bin/crew spawns.
