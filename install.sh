@@ -79,32 +79,83 @@ else
 fi
 
 # Optional: a VS Code keybinding that opens the crew in split integrated
-# terminals, instead of the external ones bin/crew spawns.
+# terminals, instead of the external ones bin/crew spawns. Each terminal runs
+# `crew run <name>`, which reads the profile and its model when the session starts.
+# A crew entry already in the file is rewritten in place, without asking: the user
+# said yes once, and a stale entry is the bug. keybindings.json is JSONC and there is
+# no jq, so that happens only on one whole-object line; anything else is printed for
+# the user to paste. The y/N prompt is for a file with no crew entry.
 case "$(uname -s)" in
   Darwin) kb="$HOME/Library/Application Support/Code/User/keybindings.json"; key="cmd+shift+c" ;;
   *)      kb="$HOME/.config/Code/User/keybindings.json"; key="meta+shift+c" ;;
 esac
 
-if [ -d "$(dirname "$kb")" ] && [ -r /dev/tty ]; then
-  printf 'crew: bind %s in VS Code to open the crew in split terminals? [y/N] ' "$key"
-  read -r ans </dev/tty || ans=n
-  case "$ans" in
-    y|Y|yes|YES)
-      cmds='' act=new wait=''
-      for f in "$repo"/prompts/*.md; do
-        n=$(basename "$f" .md)
-        m=$(cat "${f%.md}.model" 2>/dev/null | tr -d '[:space:]')
-        cmds="$cmds{\"command\":\"workbench.action.terminal.$act\"},{\"command\":\"workbench.action.terminal.sendSequence\",\"args\":{\"text\":\"${wait}claude -n $n${m:+ --model $m} --append-system-prompt-file ~/.claude/crew/$n.md\\u000D\"}},"
-        act=split wait='sleep 5; '
-      done
-      entry="  { \"key\": \"$key\", \"command\": \"runCommands\", \"args\": { \"commands\": [${cmds%,}] } }"
-      if [ -s "$kb" ] && [ -n "$(tr -d '[:space:][]' <"$kb")" ]; then
-        echo "crew: $kb already has bindings, add this entry to the array yourself:"
-        echo "$entry"
-      else
-        printf '[\n%s\n]\n' "$entry" >"$kb"
-        echo "crew: $key bound in $kb"
-      fi
-      ;;
-  esac
+cmds='' act=new wait=''
+for f in "$repo"/prompts/*.md; do
+  n=$(basename "$f" .md)
+  cmds="$cmds{\"command\":\"workbench.action.terminal.$act\"},{\"command\":\"workbench.action.terminal.sendSequence\",\"args\":{\"text\":\"${wait}crew run $n\\u000D\"}},"
+  act=split wait='sleep 5; '
+done
+entry_for() { printf '  { "key": "%s", "command": "runCommands", "args": { "commands": [%s] } }' "$1" "${cmds%,}"; }
+entry=$(entry_for "$key")
+
+# Lines of the file that run the crew: the older entries that call claude with its flags, and the current one.
+crew_n=0 hit=
+if [ -f "$kb" ] && [ -r "$kb" ]; then
+  crew_n=$(grep -c -e '--append-system-prompt-file ~/.claude/crew/' -e 'crew run ' "$kb") || :
+  crew_n=${crew_n:-0}
+  if [ "$crew_n" -eq 1 ]; then
+    hit=$(grep -n -e '--append-system-prompt-file ~/.claude/crew/' -e 'crew run ' "$kb") || hit=
+  fi
+fi
+
+if [ "$crew_n" -eq 0 ]; then
+  if [ -d "$(dirname "$kb")" ] && ( : </dev/tty ) 2>/dev/null; then
+    printf 'crew: bind %s in VS Code to open the crew in split terminals? [y/N] ' "$key"
+    read -r ans </dev/tty || ans=n
+    case "$ans" in
+      y|Y|yes|YES)
+        if [ -s "$kb" ] && [ -n "$(tr -d '[:space:][]' <"$kb")" ]; then
+          echo "crew: $kb already has bindings, add this entry to the array yourself:"
+          printf '%s\n' "$entry"
+        else
+          printf '[\n%s\n]\n' "$entry" >"$kb"
+          echo "crew: $key bound in $kb"
+        fi
+        ;;
+    esac
+  fi
+elif [ "$crew_n" -eq 1 ] && printf '%s\n' "${hit#*:}" | grep -Eq '^[[:space:]]*\{.*\}[[:space:]]*,?[[:space:]]*$'; then
+  # hit is "<line number>:<line>". Keep the line's indentation, its trailing comma and the
+  # key the user may have rebound. The entry goes into awk through ENVIRON, never -v, which
+  # would mangle the \u000D of sendSequence. The new text is copied over with cat, never mv,
+  # so a symlinked keybindings.json stays a symlink and keeps its permissions.
+  oldkey=$(printf '%s\n' "${hit#*:}" | sed -n 's/.*"key"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+  oldkey=${oldkey:-$key}
+  entry=$(entry_for "$oldkey")
+  if tmp=$(mktemp) &&
+    CREW_ENTRY=$entry CREW_LINE=${hit%%:*} awk '
+      BEGIN { n = ENVIRON["CREW_LINE"] + 0; e = ENVIRON["CREW_ENTRY"]; sub(/^[ \t]+/, "", e) }
+      NR == n {
+        match($0, /^[ \t]*/); ws = substr($0, 1, RLENGTH)
+        match($0, /\}[^}]*$/); print ws e substr($0, RSTART + 1)
+        next
+      }
+      { print }' "$kb" >"$tmp" &&
+    [ -s "$tmp" ]; then
+    # an entry that is already current rewrites to itself: write nothing, say nothing
+    if cmp -s "$tmp" "$kb"; then
+      :
+    elif { cat "$tmp" >"$kb"; } 2>/dev/null; then
+      echo "crew: $oldkey in $kb now runs crew run"
+    else
+      echo "crew: could not rewrite the crew entry in $kb, it still has the old one" >&2
+    fi
+  else
+    echo "crew: could not rewrite the crew entry in $kb, it still has the old one" >&2
+  fi
+  rm -f "$tmp"
+else
+  echo "crew: replace the crew entry in $kb with:"
+  printf '%s\n' "$entry"
 fi

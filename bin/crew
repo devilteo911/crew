@@ -1,9 +1,62 @@
 #!/bin/sh
-# Opens a Claude Code session for every profile in ~/.claude/crew/*.md
-# File name = session name; contents = appended system prompt.
+# crew [dir]       opens a terminal with a Claude Code session for every profile in ~/.claude/crew/*.md
+# crew run <name>  starts the one session of that profile, here: the single place that builds the claude command
+# `run` is the subcommand only as an exact first argument; `crew ./run` opens the crew in a directory named run.
+# File name = session name; <name>.md = appended system prompt; optional <name>.model = --model value.
 set -e
-d="${1:-$PWD}"
+self=$(readlink "$0" || echo "$0")   # ~/.local/bin/crew is a symlink (install.sh)
+root=$(CDPATH='' cd -- "$(dirname -- "$self")/.." && pwd)
+self="$root/bin/crew"
 crewdir="${CREW_DIR:-$HOME/.claude/crew}"
+
+# Keeps the clone the curl installer manages up to date, once per launch (CREW_NO_UPDATE=1 skips it).
+# Every git call sits in a condition: a failed update warns once and the launch goes on.
+update() {
+  [ "$root" = "$HOME/.local/share/crew" ] || return 0
+  [ -z "${CREW_NO_UPDATE:-}" ] || return 0
+  old=$(git -C "$root" rev-parse HEAD 2>/dev/null) || return 0
+  ok=0
+  # Only the fetch is bounded; the ff merge is local, and killing it halfway could leave a half-checked-out tree.
+  # The group keeps the shell's own "Terminated" for the killed fetch off stderr: the warning below is the one line.
+  {
+    # ponytail: 5 s watchdog, macOS has no timeout(1); raise it if slow links matter
+    GIT_TERMINAL_PROMPT=0 git -C "$root" fetch -q >/dev/null 2>&1 & p=$!
+    (sleep 5; kill "$p") >/dev/null 2>&1 & w=$!
+    if wait "$p" && git -C "$root" merge --ff-only -q '@{u}' >/dev/null 2>&1; then ok=1; fi
+    kill "$w" 2>/dev/null || true
+    wait "$w" || true
+  } 2>/dev/null
+  if [ "$ok" -eq 0 ]; then
+    echo "crew: could not update $root (offline, diverged or local changes), starting $(cat "$root/VERSION" 2>/dev/null || echo unknown) as is" >&2
+  fi
+  if [ "$(git -C "$root" rev-parse HEAD 2>/dev/null)" = "$old" ]; then return 0; fi
+  # The plugin cache is keyed by version: refresh it only when this pull changed the version and issue-flow@crew is installed.
+  # Never marketplace add (it can repoint a crew marketplace registered from another directory); stdin from /dev/null, no prompt can hang.
+  if ! git -C "$root" diff --quiet "$old" HEAD -- plugins/issue-flow/.claude-plugin/plugin.json &&
+    command -v claude >/dev/null 2>&1 &&
+    claude plugin list --json </dev/null 2>/dev/null | grep -q 'issue-flow@crew'; then
+    if claude plugin marketplace update crew </dev/null >/dev/null 2>&1 &&
+      claude plugin update issue-flow@crew </dev/null >/dev/null 2>&1; then
+      echo "crew: issue-flow updated; sessions already open load it after a restart"
+    else
+      echo "crew: could not refresh issue-flow, run: claude plugin marketplace update crew && claude plugin update issue-flow@crew" >&2
+    fi
+  fi
+  # The pull replaced this very file (git swaps in a new inode): run the new launcher with the same
+  # arguments, so the old text is never read again. CREW_NO_UPDATE stops it from updating a second time.
+  CREW_NO_UPDATE=1 exec "$self" "$@"
+}
+update "$@"
+
+if [ "${1:-}" = run ]; then
+  n="${2:-}"
+  f="$crewdir/$n.md"
+  [ -n "$n" ] && [ -f "$f" ] || { echo "crew: no profile '$n' in $crewdir" >&2; exit 1; }
+  m=$(cat "${f%.md}.model" 2>/dev/null | tr -d '[:space:]')
+  exec claude -n "$n" ${m:+--model "$m"} --append-system-prompt-file "$f"
+fi
+
+d=$(CDPATH='' cd -- "${1:-.}" && pwd)
 # ponytail: fixed delay, not a lock. The first session may auto-update Claude Code
 # and swap the ~/.local/bin/claude symlink; sessions started in that instant get
 # "command not found". Raise the delay if an update ever takes longer.
@@ -12,10 +65,7 @@ wait=
 for f in "$crewdir"/*.md; do
   [ -e "$f" ] || { echo "crew: no profiles in $crewdir" >&2; exit 1; }
   n=$(basename "$f" .md)
-  # optional <name>.model next to the profile: its content is the --model value
-  m=$(cat "${f%.md}.model" 2>/dev/null | tr -d '[:space:]')
-  # shellcheck disable=SC2016 # single quotes are literal inside this double-quoted string: $m expands
-  cmd="cd '$d' && ${wait}claude -n '$n'${m:+ --model '$m'} --append-system-prompt-file '$f'"
+  cmd="cd '$d' && ${wait}CREW_NO_UPDATE=1 '$self' run '$n'"
   case "$(uname -s)" in
     Darwin)
       osascript -e "tell app \"Terminal\" to do script \"$cmd\"" >/dev/null
