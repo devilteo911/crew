@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# Hook Stop di /issue-flow:implement e /issue-flow:big-implement: il «goal» della roadmap.
+# Stop hook of /issue-flow:implement and /issue-flow:big-implement: the roadmap "goal".
 #
-# Non lascia chiudere il turno finché una delle issue in lavorazione ha checkbox aperte nel Piano.
-# Lo stato sta in <git-dir>/issue-flow/, mai committato:
-#   goal     i numeri delle issue in lavorazione, uno per riga — uno solo per implement, tutte
-#            le figlie del progetto e la madre per big-implement (la madre non ha Piano: contano
-#            le caselle della sezione Issue, spuntate quando una figlia è unita nel suo branch);
-#            senza, l'hook non fa nulla
-#   in-volo  c'è un subagent al lavoro — di fase per implement, il runner della figlia per
-#            big-implement — e la sua notifica risveglierà l'orchestratore
-#   blocchi  quante volte di fila l'hook ha bloccato con lo stesso stato
+# It does not let the turn end while one of the issues in progress has unchecked boxes in its Plan.
+# The state lives in <git-dir>/issue-flow/, never committed:
+#   goal       the numbers of the issues in progress, one per line — just one for implement, all
+#              the children of the project and the mother for big-implement (the mother has no Plan:
+#              what counts are the boxes of its Issues section, ticked when a child is merged into
+#              its branch); without it, the hook does nothing
+#   in-flight  a subagent is at work — a phase one for implement, the child's runner for
+#              big-implement — and its notification will wake the orchestrator
+#   blocks     how many times in a row the hook has blocked with the same state
 #
-# Nel dubbio lascia fermare (exit 0): un goal che non si può verificare non deve diventare
-# un ciclo infinito.
+# When in doubt, let it stop (exit 0): a goal that cannot be verified must not turn into
+# an infinite loop.
 
-MAX_BLOCCHI=5
+MAX_BLOCKS=5
 
 command -v jq >/dev/null 2>&1 || exit 0
 
@@ -25,62 +25,64 @@ cd "$cwd" 2>/dev/null || exit 0
 
 dir=$(git rev-parse --path-format=absolute --git-path issue-flow 2>/dev/null) || exit 0
 [ -f "$dir/goal" ] || exit 0
-[ -f "$dir/in-volo" ] && exit 0
+[ -f "$dir/in-flight" ] && exit 0
 
-avviso() { echo "issue-flow: $*" >&2; exit 0; }
+warn() { echo "issue-flow: $*" >&2; exit 0; }
 
-numeri=$(grep -o '[0-9]\+' "$dir/goal")
-[ -n "$numeri" ] || avviso "$dir/goal non contiene un numero di issue: goal ignorato"
+numbers=$(grep -o '[0-9]\+' "$dir/goal")
+[ -n "$numbers" ] || warn "$dir/goal holds no issue number: goal ignored"
 
-# stessa scelta di TRACKER.md §0: il tracker lo dice il remote
+# same choice as TRACKER.md §1: the remote tells which tracker it is
 remote=$(git remote get-url origin 2>/dev/null)
 
-# somma le checkbox aperte di tutte le issue del goal; ricorda la prima che ne ha
-aperte=0
-prima=""
-for numero in $numeri; do
+# sum the unchecked boxes of all the issues in the goal; remember the first one that has any
+unchecked=0
+first=""
+for number in $numbers; do
   if [[ $remote == *github.com* ]]; then
-    corpo=$(gh issue view "$numero" --json body --jq '.body' 2>/dev/null | sed 's/\r$//')
+    body=$(gh issue view "$number" --json body --jq '.body' 2>/dev/null | sed 's/\r$//')
   else
-    corpo=$(glab issue view "$numero" --output json 2>/dev/null | jq -r '.description // empty')
+    body=$(glab issue view "$number" --output json 2>/dev/null | jq -r '.description // empty')
   fi
-  [ -n "$corpo" ] || avviso "non riesco a leggere la issue #$numero dal tracker: goal non verificato"
+  [ -n "$body" ] || warn "cannot read issue #$number from the tracker: goal not verified"
 
-  # solo le checkbox del Piano; senza una sezione Piano, tutto il corpo
-  piano=$(awk '/^## /{dentro = ($0 ~ /^## Piano/)} dentro' <<<"$corpo")
-  [ -n "$piano" ] || piano=$corpo
-  n=$(grep -c '^[[:space:]]*- \[ \]' <<<"$piano")
-  if [ "$n" -gt 0 ] && [ -z "$prima" ]; then
-    prima=$numero
-    fase=$(awk '/^### /{fase = substr($0, 5)} /^[[:space:]]*- \[ \]/{print fase; exit}' <<<"$piano")
+  # only the boxes of the Plan (the legacy "## Piano" is still read); without a Plan section, the whole body
+  plan=$(awk '/^## /{inside = ($0 ~ /^## (Plan|Piano)/)} inside' <<<"$body")
+  [ -n "$plan" ] || plan=$body
+  n=$(grep -c '^[[:space:]]*- \[ \]' <<<"$plan")
+  if [ "$n" -gt 0 ] && [ -z "$first" ]; then
+    first=$number
+    phase=$(awk '/^### /{phase = substr($0, 5)} /^[[:space:]]*- \[ \]/{print phase; exit}' <<<"$plan")
   fi
-  aperte=$((aperte + n))
+  unchecked=$((unchecked + n))
 done
 
-if [ "$aperte" -eq 0 ] && [ -z "$(git status --porcelain 2>/dev/null)" ]; then
-  rm -f "$dir/goal" "$dir/blocchi"
+if [ "$unchecked" -eq 0 ] && [ -z "$(git status --porcelain 2>/dev/null)" ]; then
+  rm -f "$dir/goal" "$dir/blocks"
   exit 0
 fi
 
-# contatore di sicurezza: se tra un blocco e l'altro non cambia niente, il turno sta girando
-# a vuoto e continuare a bloccarlo non serve
-stato="$(git rev-parse HEAD 2>/dev/null) $aperte"
-volte=0
-if [ -f "$dir/blocchi" ] && [ "$(head -1 "$dir/blocchi")" = "$stato" ]; then
-  volte=$(sed -n 2p "$dir/blocchi")
+# safety counter: if nothing changes between one block and the next, the turn is spinning
+# idle and blocking it again is pointless
+state="$(git rev-parse HEAD 2>/dev/null) $unchecked"
+times=0
+if [ -f "$dir/blocks" ] && [ "$(head -1 "$dir/blocks")" = "$state" ]; then
+  times=$(sed -n 2p "$dir/blocks")
 fi
-volte=$((volte + 1))
-printf '%s\n%s\n' "$stato" "$volte" >"$dir/blocchi"
-if [ "$volte" -gt "$MAX_BLOCCHI" ]; then
-  rm -f "$dir/blocchi"
-  avviso "#${prima:-$numeri} ferma da $MAX_BLOCCHI turni senza progressi: lascio fermare"
+times=$((times + 1))
+printf '%s\n%s\n' "$state" "$times" >"$dir/blocks"
+if [ "$times" -gt "$MAX_BLOCKS" ]; then
+  rm -f "$dir/blocks"
+  warn "#${first:-$numbers} stalled for $MAX_BLOCKS turns without progress: letting it stop"
 fi
 
-if [ "$aperte" -eq 0 ]; then
-  motivo="Roadmap tutta spuntata, ma ci sono modifiche non committate: committa l'ultima fase secondo /issue-flow:implement."
+if [ "$unchecked" -eq 0 ]; then
+  reason="Roadmap fully ticked, but there are uncommitted changes: commit the last phase as /issue-flow:implement says."
 else
-  motivo="Roadmap di #$prima non completa: $aperte checkbox aperte${fase:+, la prima in «$fase»}. Prosegui secondo /issue-flow:implement (o /issue-flow:big-implement, se stai portando avanti un progetto: il controllo della figlia che il runner ha riportato, poi un issue-runner nuovo per la successiva)."
+  noun=boxes
+  [ "$unchecked" -eq 1 ] && noun=box
+  reason="Roadmap of #$first is not complete: $unchecked unchecked $noun${phase:+, the first one in \"$phase\"}. Carry on as /issue-flow:implement says (or /issue-flow:big-implement, if you are running a project: check the child that the runner reported, then start a fresh issue-runner for the next one)."
 fi
-motivo+=" Se sei in uno dei casi di «Quando fermarsi davvero», o lasci una checkbox vuota per un motivo, rimuovi $dir/goal e spiega all'utente perché ti fermi."
+reason+=" If you are in one of the cases of \"When to really stop\", or you leave a box unchecked for a reason, remove $dir/goal and tell the user why you stop."
 
-jq -n --arg r "$motivo" '{decision: "block", reason: $r}'
+jq -n --arg r "$reason" '{decision: "block", reason: $r}'

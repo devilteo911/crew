@@ -1,68 +1,68 @@
-# TEMPLATE — il file ROADMAP.md
+# TEMPLATE — the ROADMAP.md file
 
-Il file che `/issue-flow:roadmap` scrive nella radice del repo quando l'utente sceglie di
-salvare la roadmap invece di aprire le issue. Si riscrive per intero ogni volta: descrive i
-prossimi passi di oggi, e le versioni precedenti stanno nella storia di git.
+The file that `/issue-flow:roadmap` writes in the repo root when the user chooses to save the
+roadmap instead of opening the issues. It is rewritten in full every time: it describes today's
+next steps, and the previous versions are in git's history. It is written in English, whatever
+language the chat is in.
 
-Le sezioni sono queste, in quest'ordine. Il testo fra parentesi quadre è istruzione per chi
-scrive e non va copiato. Le sezioni segnate facoltative si omettono se sono vuote.
+The sections are these, in this order. The text in square brackets is an instruction for whoever
+writes and is not to be copied. The sections marked optional are omitted if they are empty.
 
 ---
 
 # Roadmap
 
-**Aggiornata al GG-MM-AAAA** da `/issue-flow:roadmap`[ — focus: <focus>, se c'era].
+**Updated on DD-MM-YYYY** by `/issue-flow:roadmap`[ — focus: <focus>, if there was one].
 
-## Dove siamo
+## Where we are
 
-[Tre o quattro righe: cosa c'è oggi, cosa si sta facendo, qual è il prossimo traguardo.
-Ogni affermazione con la sua fonte.]
+[Three or four lines: what exists today, what is being done, what the next milestone is.
+Every claim with its source.]
 
-**Fonti lette:** [l'elenco: i documenti con il percorso — per research-flow l'ufficiale con la
-sua data e i registri —, la ROADMAP.md precedente se c'era, le issue aperte guardate (o «tracker
-non consultato»).]
+**Sources read:** [the list: the documents with their path — for research-flow the official one
+with its date, and the registers —, the previous ROADMAP.md if there was one, the open issues
+looked at (or "tracker not consulted").]
 
-## Prossimi passi
+## Next steps
 
-[In ordine di esecuzione. Ogni passo ha la dimensione di una issue, e si può aprire con
-`/issue-flow:plan` copiando il suo titolo e la sua descrizione.]
+[In execution order. Each step has the size of an issue, and can be opened with
+`/issue-flow:plan` by copying its title and its description.]
 
-### 1. [titolo: cosa cambia per chi usa il prodotto]
+### 1. [title: what changes for whoever uses the product]
 
-- **Consegna:** [cosa esiste a passo finito, in una o due righe]
-- **Perché adesso:** [il motivo della posizione, con le fonti: `TODO-012`, `ESP-031`,
-  `README.md` §Roadmap, `#45`, `percorso/file.py:88`. **Proposta nostra** se non viene da una
-  fonte]
-- **Dopo sappiamo:** [facoltativa: cosa si saprà — l'ipotesi che regge o cade, il criterio di
-  successo che si misura]
-- **Dipende da:** [il passo, un'attesa, una issue già aperta, oppure «niente»]
+- **Delivers:** [what exists when the step is done, in one or two lines]
+- **Why now:** [the reason for the position, with the sources: `TODO-012`, `ESP-031`,
+  `README.md` §Roadmap, `#45`, `path/file.py:88`. **Our proposal** if it does not come from a
+  source]
+- **After this we know:** [optional: what will be known — the hypothesis that holds or falls,
+  the success criterion that gets measured]
+- **Depends on:** [the step, a wait, an issue already open, or "nothing"]
 
-### 2. [titolo]
+### 2. [title]
 
 […]
 
-## Già aperto
+## Already open
 
-[Facoltativa. Le issue e le madri già sul tracker su cui questa roadmap si appoggia, con il
-numero e cosa manca per chiuderle.]
+[Optional. The issues and the mothers already on the tracker that this roadmap leans on, with
+the number and what is missing to close them.]
 
-## Attese
+## Waiting on
 
-[Facoltativa. Quello che non è lavoro nostro ma blocca o condiziona dei passi: domande alle
-fonti, dati da accumulare, decisioni di qualcun altro. Una riga ciascuna, con i passi che ne
-dipendono.]
+[Optional. What is not our work but blocks or conditions steps: questions to the sources, data
+to accumulate, decisions of someone else. One line each, with the steps that depend on them.]
 
-## Dopo
+## After
 
-[Facoltativa. Quello che viene oltre l'orizzonte, una riga per voce. Dopo un bivio, i due rami:
-«se ESP-031 è positivo → …; se è negativo → …».]
+[Optional. What comes beyond the horizon, one line per entry. After a fork, the two branches:
+"if ESP-031 is positive → …; if it is negative → …".]
 
-## Lasciato fuori
+## Left out
 
-[Quello che le fonti danno da fare e questa roadmap non contiene, con il motivo: già fatto (e la
-fonte da correggere), superato, fuori focus, priorità bassa.]
+[What the sources list as to do and this roadmap does not contain, with the reason: already
+done (and the source to correct), superseded, out of focus, low priority.]
 
-## Incongruenze trovate
+## Inconsistencies found
 
-[Facoltativa. Fonti che non corrispondono al codice o al tracker: voci aperte già fatte, issue
-dimenticate, documenti più vecchi dei registri. Ognuna con chi deve correggerla.]
+[Optional. Sources that do not match the code or the tracker: open entries already done,
+forgotten issues, documents older than the registers. Each with who has to correct it.]

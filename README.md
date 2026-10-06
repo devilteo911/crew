@@ -80,9 +80,10 @@ A plugin change reaches users only with a version bump in both
 `plugins/issue-flow/.claude-plugin/plugin.json` and
 `.claude-plugin/marketplace.json`.
 
-Upstream changes come in with
-`git subtree pull --prefix=plugins/issue-flow https://github.com/MatteoSid/Issues-Master-Skills.git main`,
-merged with a merge commit, never squashed.
+Upstream [Issues-Master-Skills](https://github.com/MatteoSid/Issues-Master-Skills)
+is frozen at the imported commit, and crew is issue-flow's only home from 2.0.0
+on: the tree is translated, so Italian upstream commits would conflict on every
+file and no longer come in.
 
 ## Platforms
 
