@@ -79,7 +79,9 @@ fi
 if [ "$unchecked" -eq 0 ]; then
   reason="Roadmap fully ticked, but there are uncommitted changes: commit the last phase as /issue-flow:implement says."
 else
-  reason="Roadmap of #$first is not complete: $unchecked unchecked boxes${phase:+, the first one in \"$phase\"}. Carry on as /issue-flow:implement says (or /issue-flow:big-implement, if you are running a project: check the child that the runner reported, then start a fresh issue-runner for the next one)."
+  noun=boxes
+  [ "$unchecked" -eq 1 ] && noun=box
+  reason="Roadmap of #$first is not complete: $unchecked unchecked $noun${phase:+, the first one in \"$phase\"}. Carry on as /issue-flow:implement says (or /issue-flow:big-implement, if you are running a project: check the child that the runner reported, then start a fresh issue-runner for the next one)."
 fi
 reason+=" If you are in one of the cases of \"When to really stop\", or you leave a box unchecked for a reason, remove $dir/goal and tell the user why you stop."
 
