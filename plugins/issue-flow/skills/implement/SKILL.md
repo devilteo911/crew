@@ -1,7 +1,7 @@
 ---
 name: implement
-description: "Prende una issue dal tracker del repo — GitLab o GitHub — e ne implementa la roadmap: una fase per subagent, le checkbox spuntate sulla issue mano a mano che il lavoro si chiude, un commit per fase. Si ferma al commit dell'ultima fase: la merge request la apre /issue-flow:close. Con il numero di una issue madre di /issue-flow:big-plan esegue la prima figlia non ancora unita. Trigger: /issue-flow:implement, «implementa la issue N», «porta a termine la issue N», «lavora la issue N»."
-argument-hint: "<numero> [--da N]"
+description: "Takes an issue from the repo's tracker — GitLab or GitHub — and implements its roadmap: one subagent per phase, the checkboxes ticked on the issue as the work closes, one commit per phase. It stops at the commit of the last phase: /issue-flow:close opens the merge request. Given the number of a /issue-flow:big-plan mother issue, it runs the first child not yet merged. Trigger: /issue-flow:implement, 'implement issue N', 'finish issue N', 'work on issue N'."
+argument-hint: "<number> [--from N]"
 hooks:
   Stop:
     - hooks:
@@ -11,300 +11,312 @@ hooks:
 
 # /issue-flow:implement
 
-`/issue-flow:plan` scrive l'istruzione di lavoro, questa la esegue. Tutto quello che serve sta
-nella issue: piano, contesto, roadmap. Non si aggiunge lavoro che la issue non prevede e non
-si salta lavoro che prevede.
+`/issue-flow:plan` writes the work instruction, this one carries it out. Everything that is
+needed is in the issue: plan, context, roadmap. No work is added that the issue does not
+foresee, and no work it foresees is skipped.
 
 ## Usage
 
 ```
-/issue-flow:implement <numero>         # esegue la issue dalla prima fase non spuntata
-/issue-flow:implement <madre>          # issue madre di big-plan: esegue la prima figlia aperta
-/issue-flow:implement <numero> --da 3  # riparte dalla fase 3, ignorando le checkbox
-/issue-flow:implement                  # deduce il numero dal branch corrente
+/issue-flow:implement <number>          # runs the issue from the first unchecked phase
+/issue-flow:implement <mother>          # big-plan mother issue: runs the first open child
+/issue-flow:implement <number> --from 3 # resumes from phase 3, ignoring the checkboxes
+/issue-flow:implement                   # infers the number from the current branch
 ```
 
-## Tu sei l'orchestratore e resti tale
+`--from N` resumes at `### Phase N` (`### Fase N` on a 1.x issue). The 1.x argument `--da N` is
+still accepted (`TRACKER.md` §6).
 
-Non implementi le fasi: le assegni, ne verifichi l'esito, spunti le caselle e committi.
+## You are the orchestrator, and you stay one
 
-Il motivo è il contesto. Ogni fase parte da un subagent pulito che legge solo i file che le
-servono, mentre tu tieni la visione dell'insieme — a che punto è la roadmap, cosa ha deciso
-la fase precedente, cosa manca — senza riempirti dei dettagli di ogni singolo file.
+You do not implement the phases: you assign them, verify the outcome, tick the boxes and
+commit.
 
-Con `/issue-flow:big-implement` questo stesso ciclo scende di un livello: lo esegue per ogni
-figlia un subagent `issue-flow:issue-runner`, che legge questa skill come riferimento e lascia
-il goal alla sessione principale.
+The reason is context. Each phase starts from a clean subagent that reads only the files it
+needs, while you keep the overall view — where the roadmap stands, what the previous phase
+decided, what is missing — without filling up on the details of every single file.
 
-## Lavori in modalità goal
+With `/issue-flow:big-implement` this same cycle goes down one level: for each child, an
+`issue-flow:issue-runner` subagent runs it, reads this skill as a reference and leaves the goal
+to the main session.
 
-Questa skill si comporta come un `/goal` con la condizione già scritta: **non si ferma finché
-la roadmap non è completa**. Lo fa un hook `Stop` del plugin (`scripts/goal-stop.sh`) che a
-ogni fine turno rilegge la issue dal tracker: finché nel Piano c'è una `- [ ]`, o l'ultima
-fase non è committata, ti rimanda al lavoro dicendoti da quale fase ripartire.
+## You work in goal mode
 
-L'hook legge lo stato da una cartella dentro `.git`, che non finisce mai in un commit:
+This skill behaves like a `/goal` with the condition already written: **it does not stop until
+the roadmap is complete**. A `Stop` hook of the plugin (`scripts/goal-stop.sh`) does it: at
+every turn end it re-reads the issue from the tracker, and as long as the Plan has a `- [ ]`,
+or the last phase is not committed, it sends you back to work, telling you which phase to
+resume from.
+
+The hook reads its state from a folder inside `.git`, which never ends up in a commit:
 
 ```bash
 GOAL_DIR=$(git rev-parse --path-format=absolute --git-path issue-flow)
 ```
 
-- `$GOAL_DIR/goal` — il numero della issue in lavorazione. Lo scrivi al passo 2; a roadmap
-  completa lo cancella l'hook. Finché c'è, il turno non si chiude.
-- `$GOAL_DIR/in-volo` — c'è un subagent di fase al lavoro. Lo crei subito prima di delegare
-  e lo cancelli appena torna: in mezzo puoi chiudere il turno, perché ti risveglia la sua
-  notifica.
+- `$GOAL_DIR/goal` — the number of the issue being worked on. You write it at step 2; when the
+  roadmap is complete the hook deletes it. As long as it exists, the turn does not close.
+- `$GOAL_DIR/in-flight` — a phase subagent is at work. You create it right before delegating
+  and delete it as soon as it returns: in between you may close the turn, because its
+  notification wakes you up.
 
-Per fermarti prima della fine — i casi di «Quando fermarsi davvero», o una checkbox che resta
-vuota — **cancelli tu `$GOAL_DIR/goal`** e dici all'utente perché. È voluto: lo stop è una
-decisione esplicita, non un turno che finisce per caso a metà roadmap. Se ti fermi prima del
-passo 2, il file non esiste ancora e non c'è niente da cancellare.
+To stop before the end — the cases of "When to really stop", or a checkbox that stays
+empty — **you delete `$GOAL_DIR/goal` yourself** and tell the user why. This is deliberate: the
+stop is an explicit decision, not a turn that happens to end halfway through the roadmap. If
+you stop before step 2, the file does not exist yet and there is nothing to delete.
 
-## 0. Quale tracker, e risponde
+## 0. Which tracker, and does it answer
 
-Il tracker è GitLab (`glab`) o GitHub (`gh`) secondo il remote: `git remote get-url origin`.
-La corrispondenza completa dei comandi sta in `${CLAUDE_PLUGIN_ROOT}/TRACKER.md` — il file
-`TRACKER.md` nella cartella di questo plugin — da leggere prima del primo comando, perché il
-campo del corpo cambia nome fra le due piattaforme e sbagliarlo svuota la issue.
+The tracker is GitLab (`glab`) or GitHub (`gh`) depending on the remote: `git remote get-url origin`.
+The full command mapping is in `${CLAUDE_PLUGIN_ROOT}/TRACKER.md` — the file `TRACKER.md` in
+this plugin's folder — to be read before the first command, because the body field changes
+name between the two platforms and getting it wrong empties the issue.
 
 ```bash
-glab auth status && glab issue view <numero>          # GitLab
-gh   auth status && gh   issue view <numero>          # GitHub
+glab auth status && glab issue view <number>          # GitLab
+gh   auth status && gh   issue view <number>          # GitHub
 ```
 
-Deve mostrare la issue, non un 404. Se dà 404 o «could not determine base repo» il remote è
-un alias SSH e il rimedio è in `TRACKER.md` §2. Se non sei autenticato, fermati e chiedi
-all'utente `glab auth login --hostname gitlab.com` o `gh auth login --hostname github.com`:
-è interattivo, non puoi farlo tu.
+It must show the issue, not a 404. If it gives 404 or "could not determine base repo", the
+remote is an SSH alias and the remedy is in `TRACKER.md` §2. If you are not authenticated,
+stop and ask the user to run `glab auth login --hostname gitlab.com` or
+`gh auth login --hostname github.com`: it is interactive, you cannot do it yourself.
 
-## 1. Leggi la issue, per intero, dal server
+## 1. Read the issue, all of it, from the server
 
 ```bash
 # GitLab
-glab issue view <numero> --output json > "$SCRATCH/issue.json"
+glab issue view <number> --output json > "$SCRATCH/issue.json"
 jq -r '.title'       "$SCRATCH/issue.json"
 jq -r '.description' "$SCRATCH/issue.json" > "$SCRATCH/roadmap.md"
 
 # GitHub
-gh issue view <numero> --json title,body > "$SCRATCH/issue.json"
+gh issue view <number> --json title,body > "$SCRATCH/issue.json"
 jq -r '.title' "$SCRATCH/issue.json"
 jq -r '.body'  "$SCRATCH/issue.json" | sed 's/\r$//' > "$SCRATCH/roadmap.md"
 ```
 
-Controlla che `roadmap.md` non sia vuoto prima di andare avanti: se lo è, hai pescato il
-campo dell'altra piattaforma.
+Check that `roadmap.md` is not empty before going on: if it is, you picked the other
+platform's field.
 
-Se in testa al corpo c'è `**Tipo:** roadmap`, è la madre di un `/issue-flow:big-plan` e non
-si implementa: vai al passo 1 bis. Se c'è `**Roadmap:** #<madre>`, è una figlia: vale tutto
-quello che segue, più il passo 1 ter prima del branch.
+If the top of the body has `**Type:** roadmap` or `**Tipo:** roadmap`, it is the mother of a
+`/issue-flow:big-plan` and it is not implemented: go to step 1 bis. If it has
+`**Roadmap:** #<mother>`, it is a child: everything that follows applies, plus step 1 ter
+before the branch. Both spellings are in `TRACKER.md` §6.
 
-Leggila tutta, non solo il Piano: **Obiettivo**, **Contesto** e **Fuori perimetro** sono ciò
-che impedisce ai subagent di reinventare le decisioni già prese, e vanno passati loro.
+Read all of it, not just the Plan: **Goal**, **Context** and **Out of scope** — on a 1.x issue
+**Obiettivo**, **Contesto** and **Fuori perimetro** — are what keeps the subagents from
+reinventing decisions already made, and they must be passed to them.
 
-Poi ricava, e dillo all'utente prima di partire:
+Then work out, and tell the user before starting:
 
-- il branch di lavoro, `${user_config.branch_prefix}<numero>` — con il default `issue-`, la
-  issue #12 si lavora su `issue-12`;
-- l'elenco delle fasi (`###` dentro `## Piano`) con quante checkbox hanno e quante sono già
-  spuntate, e da quale fase riparti;
-- se la issue non ha fasi con checkbox, **fermati**: non è una issue eseguibile. Riportalo e
-  proponi `/issue-flow:plan rivedi <numero>`.
+- the working branch, `${user_config.branch_prefix}<number>` — with the default `issue-`,
+  issue #12 is worked on `issue-12`;
+- the list of phases (the `###` inside `## Plan`, or `## Piano` on a 1.x issue) with how many
+  checkboxes each has and how many are already ticked, and which phase you resume from;
+- if the issue has no phases with checkboxes, **stop**: it is not an executable issue. Report
+  it and propose `/issue-flow:plan revise <number>`.
 
-## 1 bis. La madre: quale figlia tocca
+## 1 bis. The mother: which child is next
 
-Le figlie si eseguono **una alla volta, in ordine**. Nella sezione **Issue** della madre, la
-prima riga `- [ ] #<n>` non spuntata è la figlia da eseguire:
+Children are run **one at a time, in order**. In the mother's **Issues** section (`## Issues`,
+or `## Issue` on a 1.x issue), the first unchecked `- [ ] #<n>` line is the child to run:
 
 ```bash
 grep -n '^[[:space:]]*- \[ \] #[0-9]' "$SCRATCH/roadmap.md" | head -1
 ```
 
-Prima di prenderla, guarda che le figlie da cui dipende — la riga `· dipende da #<k>` nella
-madre, `**Dipende da:**` nella figlia — siano **chiuse** sul tracker
+Before taking it, check that the children it depends on — the `· depends on #<k>` line in the
+mother (`· dipende da #<k>` on a 1.x issue), `**Depends on:**` in the child
+(`**Dipende da:**`) — are **closed** on the tracker
 (`glab issue view <k> --output json --jq '.state'` → `closed`, `gh issue view <k> --json state
---jq '.state'` → `CLOSED`). Una figlia con una dipendenza ancora aperta non si comincia: dillo
-all'utente e indica quale va chiusa prima — di solito è una MR/PR in attesa di merge.
+--jq '.state'` → `CLOSED`). A child with a dependency still open is not started: tell the user
+and say which one has to be closed first — usually an MR/PR waiting to be merged.
 
-Se tutte le caselle della madre sono spuntate, il progetto è finito: dillo, e se la madre è
-ancora aperta proponi di chiuderla. Se una casella è vuota ma la figlia è già chiusa sul
-tracker, la madre è rimasta indietro: segnalalo invece di rieseguire la figlia.
+If all the mother's boxes are ticked, the project is finished: say so, and if the mother is
+still open propose closing it. If a box is empty but the child is already closed on the
+tracker, the mother has fallen behind: flag it instead of re-running the child.
 
-Poi dì all'utente «procedo con #<n> — <titolo>» e ricomincia dal passo 1 con il numero della
-figlia. **Mai due figlie nella stessa esecuzione**: ognuna ha il suo branch e la sua MR/PR, e la
-successiva parte dal codice che questa avrà unito.
+Then tell the user "proceeding with #<n> — <title>" and start again from step 1 with the
+child's number. **Never two children in the same run**: each has its own branch and its own
+MR/PR, and the next one starts from the code that this one will have merged.
 
-Per portare avanti tutte le figlie in una volta sola, senza aspettare i merge, c'è
-`/issue-flow:big-implement <madre>`: stessa esecuzione, una figlia alla volta, sul branch della
-madre — ogni figlia ci entra da sola, e al branch di destinazione arriva solo la MR/PR della
-madre.
+To move all the children forward in one go, without waiting for the merges, there is
+`/issue-flow:big-implement <mother>`: same run, one child at a time, on the mother branch —
+each child enters it on its own, and only the mother's MR/PR reaches the target branch.
 
-## 1 ter. La figlia regge ancora?
+## 1 ter. Does the child still hold?
 
-Una figlia è stata scritta prima che le sorelle da cui dipende fossero implementate: i suoi
-`file:riga` e i punti d'aggancio marcati «nasce con #<k>» descrivevano un codice che adesso è
-diverso. Prima di delegare la prima fase, controlla:
+A child was written before the siblings it depends on were implemented: its `file:line`
+references and the hook points marked "created in #<k>" described code that is different now.
+Before delegating the first phase, check:
 
-- le dipendenze sono **chiuse** sul tracker e il loro lavoro è **nella base** del passo 2
-  (`git log --oneline <base> | grep '#<k>'`, o i file che dovevano far nascere esistono);
-- i punti d'aggancio «nasce con #<k>» esistono davvero, con il nome che la figlia si aspetta;
-- i `file:riga` della prima fase puntano ancora a quello che la issue descrive.
+- the dependencies are **closed** on the tracker and their work is **in the base** of step 2
+  (`git log --oneline <base> | grep '#<k>'`, or the files they were meant to create exist);
+- the hook points "created in #<k>" really exist, under the name the child expects;
+- the `file:line` references of the first phase still point to what the issue describes.
 
-Se qualcosa non regge in modo sostanziale — un file che non esiste, un'interfaccia nata con
-un'altra forma, una decisione che la sorella ha cambiato in corsa — **fermati** e proponi
-`/issue-flow:plan rivedi <numero>`. Le righe solo spostate di qualche posizione non sono un
-motivo per fermarsi: il subagent le riverifica comunque. Il rimedio giusto è correggere la
-issue prima del codice.
+If something does not hold in a substantial way — a file that does not exist, an interface
+created with a different shape, a decision the sibling changed along the way — **stop** and
+propose `/issue-flow:plan revise <number>`. Lines that only moved by a few positions are not a
+reason to stop: the subagent re-verifies them anyway. The right remedy is to fix the issue
+before the code.
 
-## 2. Il branch
+## 2. The branch
 
-Il lavoro non tocca mai il branch di destinazione — `${user_config.default_branch}`, o quello
-che restituisce `git symbolic-ref --short refs/remotes/origin/HEAD | sed 's#^origin/##'`.
+The work never touches the target branch — `${user_config.default_branch}`, or what
+`git symbolic-ref --short refs/remotes/origin/HEAD | sed 's#^origin/##'` returns.
 
 ```bash
-git status --porcelain                # deve essere vuoto: un commit per fase ha senso
-                                      # solo se il commit contiene la fase e nient'altro
+git status --porcelain                # must be empty: one commit per phase only makes sense
+                                      # if the commit holds the phase and nothing else
 git switch <branch> 2>/dev/null \
   || { git switch <base> && git pull --ff-only && git switch -c <branch>; }
 ```
 
-Se ci sono modifiche non committate, fermati e chiedi cosa farne.
+If there are uncommitted changes, stop and ask what to do with them.
 
-Sul branch giusto, attiva il goal — con il numero della issue che stai eseguendo, che per una
-madre è quello della figlia:
+On the right branch, activate the goal — with the number of the issue you are running, which
+for a mother is the child's:
 
 ```bash
-mkdir -p "$GOAL_DIR" && echo <numero> > "$GOAL_DIR/goal" && rm -f "$GOAL_DIR/in-volo"
+mkdir -p "$GOAL_DIR" && echo <number> > "$GOAL_DIR/goal" && rm -f "$GOAL_DIR/in-flight"
 ```
 
-Il `rm` toglie un `in-volo` rimasto da una sessione interrotta, che altrimenti lascerebbe il
-goal sempre spento.
+The `rm` removes an `in-flight` left over from an interrupted session, which would otherwise
+leave the goal permanently off.
 
-Per una figlia di un big-plan il branch nasce **sempre** dal branch in cui stanno le sorelle
-già unite, appena aggiornato — il `git pull --ff-only` qui sopra:
+For a child of a big-plan, the branch is **always** created from the branch where the
+already-merged siblings are, freshly updated — the `git pull --ff-only` above:
 
-- il **branch della madre**, `${user_config.branch_prefix}<madre>`, se esiste su `origin`
-  (`git ls-remote --exit-code --heads origin <branch-madre>`): il progetto è portato avanti da
-  `/issue-flow:big-implement`, e le sorelle si uniscono lì;
-- il branch di destinazione altrimenti.
+- the **mother branch**, `${user_config.branch_prefix}<mother>`, if it exists on `origin`
+  (`git ls-remote --exit-code --heads origin <mother-branch>`): the project is run by
+  `/issue-flow:big-implement`, and the siblings merge there;
+- the target branch otherwise.
 
-Mai dal branch di una sorella non ancora unita.
+Never from the branch of a sibling that is not merged yet.
 
-## 3. Il ciclo, una fase alla volta
+## 3. The loop, one phase at a time
 
-Per ogni fase non completata, in ordine. Quattro passi, sempre gli stessi.
+For each incomplete phase, in order. Four steps, always the same.
 
-### Delega
+### Delegate
 
-Un'invocazione del tool `Agent` con `subagent_type: "issue-flow:issue-phase"`. Il subagent non
-ha visto la conversazione e non ha letto la issue: **quello che non gli scrivi non esiste**.
-Nel prompt vanno, integrali e non riassunti:
+One call of the `Agent` tool with `subagent_type: "issue-flow:issue-phase"`. The subagent has
+not seen the conversation and has not read the issue: **what you do not write to it does not
+exist**. The prompt must contain, in full and not summarised:
 
-- numero e titolo della issue, e branch su cui si sta lavorando;
-- le sezioni **Obiettivo**, **Contesto** e **Fuori perimetro** della issue;
-- il numero della fase e il suo **testo integrale**: cappello, elenco dei file, tutte le
-  checkbox con i frammenti di codice sotto, la riga «Fatto quando»;
-- cosa hanno lasciato le fasi precedenti, se hanno deviato dal piano scritto.
+- number and title of the issue, and the branch you are working on;
+- the **Goal**, **Context** and **Out of scope** sections of the issue (**Obiettivo**,
+  **Contesto** and **Fuori perimetro** on a 1.x issue);
+- the phase number and its **full text**: lead-in, list of files, all the checkboxes with the
+  code snippets under them, the "Done when" line;
+- what the previous phases left behind, if they deviated from the written plan.
 
-Subito prima dell'invocazione `touch "$GOAL_DIR/in-volo"`, e appena il subagent torna
-`rm -f "$GOAL_DIR/in-volo"`, prima della verifica.
+Right before the call, `touch "$GOAL_DIR/in-flight"`, and as soon as the subagent returns,
+`rm -f "$GOAL_DIR/in-flight"`, before the verification.
 
-Regole non negoziabili:
+Non-negotiable rules:
 
-- **un subagent nuovo per ogni fase.** Mai riusarne uno con `SendMessage` per la fase dopo,
-  mai passargliene due insieme, mai due fasi in parallelo: la fase N+1 parte dal codice che
-  la fase N ha lasciato, e in parallelo si pestano i piedi sugli stessi file;
-- se la roadmap ha una fase Figma, è una fase come le altre e va al suo subagent, che userà la
-  skill `figma:figma-use` e il tool `use_figma` sul file `${user_config.figma_file}`. Va
-  **prima** del codice, sempre, perché il codice si adegua al Figma e non viceversa;
-- la fase di chiusura — documentazione e commit — la tieni tu: è coordinamento, non
-  implementazione.
+- **a new subagent for every phase.** Never reuse one with `SendMessage` for the next phase,
+  never hand it two at once, never two phases in parallel: phase N+1 starts from the code that
+  phase N left, and in parallel they step on each other's toes on the same files;
+- if the roadmap has a Figma phase, it is a phase like the others and goes to its own
+  subagent, which will use the `figma:figma-use` skill and the `use_figma` tool on the file
+  `${user_config.figma_file}`. It goes **before** the code, always, because the code adapts to
+  the Figma and not the other way round;
+- the closing phase — documentation and commit — you keep yourself: it is coordination, not
+  implementation.
 
-### Verifica
+### Verify
 
-Al ritorno del subagent esegui **tu** i comandi della fase e guarda l'output vero. Il report
-di un subagent è un racconto, non una prova.
+When the subagent returns, **you** run the phase's commands and look at the real output. A
+subagent's report is a story, not proof.
 
-Se la fase non porta comandi propri, valgono quelli del progetto per la parte toccata: quelli
-che la issue elenca nella fase di verifica, o `${user_config.verify_commands}`.
+If the phase has no commands of its own, the project's apply for the part that was touched:
+the ones the issue lists in the verification phase, or `${user_config.verify_commands}`.
 
-Se la verifica fallisce: una seconda passata con un subagent **nuovo**, a cui dai l'output
-dell'errore e cosa era stato tentato. Se fallisce di nuovo, fermati e riporta — due
-fallimenti sulla stessa fase dicono che è sbagliata la issue, non il subagent.
+If verification fails: a second pass with a **new** subagent, to which you give the error
+output and what had been tried. If it fails again, stop and report — two failures on the same
+phase say that the issue is wrong, not the subagent.
 
-### Spunta le caselle sulla issue
+### Tick the boxes on the issue
 
-Appena la verifica passa, e non a lavoro finito. È il passo che rende la issue leggibile a
-chi riprende dopo un `/clear`: senza, la roadmap mente.
+As soon as verification passes, and not when the work is done. It is the step that makes the
+issue readable to whoever resumes after a `/clear`: without it, the roadmap lies.
 
 ```bash
 # GitLab
-glab issue view <numero> --output json --jq '.description' > "$SCRATCH/roadmap.md"
+glab issue view <number> --output json --jq '.description' > "$SCRATCH/roadmap.md"
 
 # GitHub
-gh issue view <numero> --json body --jq '.body' > "$SCRATCH/roadmap.md"
+gh issue view <number> --json body --jq '.body' > "$SCRATCH/roadmap.md"
 sed -i 's/\r$//' "$SCRATCH/roadmap.md"
 
-# giri in `- [x]` SOLO le checkbox della fase appena chiusa
-# porti la riga «**Stato:**» a `in corso — fase N di M`
+# turn into `- [x]` ONLY the checkboxes of the phase just closed
+# bring the "**Status:**" line to `in progress — phase N of M`
 
-glab issue update <numero> --description-file "$SCRATCH/roadmap.md"   # GitLab
-gh   issue edit   <numero> --body-file        "$SCRATCH/roadmap.md"   # GitHub
+glab issue update <number> --description-file "$SCRATCH/roadmap.md"   # GitLab
+gh   issue edit   <number> --body-file        "$SCRATCH/roadmap.md"   # GitHub
 ```
 
-**Rileggi sempre il corpo dal server prima di riscriverlo**, mai da una copia tenuta in
-conversazione: l'update sostituisce l'intero campo e non fa merge, quindi una versione vecchia
-cancella quello che l'utente ha spuntato dalla pagina mentre lavoravi. E controlla che il file
-non sia vuoto prima di rimandarlo su.
+On a 1.x issue, write the English value on the status line that is already there, and never add
+a second one (`TRACKER.md` §6).
 
-Se durante l'implementazione una decisione è cambiata, **riscrivi la riga** invece di
-spuntarla: la roadmap deve dire cosa è stato fatto davvero. Se il subagent non è riuscito a
-completare una checkbox, resta `- [ ]` e il motivo va detto all'utente alla fine.
-Con una checkbox vuota la roadmap non risulta mai completa: a fine lavoro cancella tu
-`$GOAL_DIR/goal`, sennò l'hook ti rimanda indietro.
+**Always re-read the body from the server before rewriting it**, never from a copy kept in the
+conversation: the update replaces the whole field and does not merge, so an old version erases
+what the user ticked from the page while you were working. And check that the file is not
+empty before sending it back up.
 
-### Committa
+If a decision changed during the implementation, **rewrite the line** instead of ticking it:
+the roadmap must say what was really done. If the subagent could not complete a checkbox, it
+stays `- [ ]` and the reason goes to the user at the end. With an empty checkbox the roadmap
+never counts as complete: at the end of the work, delete `$GOAL_DIR/goal` yourself, or the
+hook sends you back.
 
-La fase e nient'altro:
+### Commit
+
+The phase and nothing else:
 
 ```bash
-git add -A && git commit -m "<tipo>(<ambito>): <cosa cambia per chi usa> (#<numero>)"
+git add -A && git commit -m "<type>(<scope>): <what changes for whoever uses it> (#<number>)"
 ```
 
-I messaggi seguono la convenzione già nel log del progetto — guardalo con
-`git log --oneline -20` prima del primo commit, invece di imporne una tua. Mai committare con
-la verifica fallita, mai un commit che copre due fasi.
+Messages follow the convention already in the project's log — look at it with
+`git log --oneline -20` before the first commit, instead of imposing one of your own. Never
+commit with verification failing, never a commit that covers two phases.
 
-## 4. Dove finisce questa skill
+## 4. Where this skill ends
 
-Al commit dell'ultima fase, con tutte le caselle spuntate sulla issue. **La MR/PR non la apri
-qui**: la apre `/issue-flow:close <numero>`, che rifà la verifica sull'albero finale e ne
-scrive il corpo. Dirlo all'utente nella consegna è parte del lavoro — sennò resta con un
-branch pronto e nessuno che glielo porta a destinazione.
+At the commit of the last phase, with all the boxes ticked on the issue. **You do not open the
+MR/PR here**: `/issue-flow:close <number>` opens it, redoing the verification on the final tree
+and writing its body. Telling the user so in the delivery is part of the job — otherwise they
+are left with a ready branch and nobody to take it to its destination.
 
-Porta la riga **Stato:** della issue a `implementata — in attesa di merge request` (su GitHub:
-`in attesa di pull request`), così chi riapre la pagina sa a che punto è senza guardare il log
-di git.
+Bring the issue's **Status:** line to `implemented — awaiting merge request` (on GitHub:
+`awaiting pull request`), so that whoever reopens the page knows where things stand without
+looking at the git log.
 
-## 5. Consegna
+## 5. Delivery
 
-Poche righe: le fasi chiuse con i loro commit (`git log --oneline`), le checkbox rimaste
-vuote con il motivo, le deviazioni scritte nella roadmap, i problemi che i subagent hanno
-visto fuori dal loro perimetro, e come si prosegue: `/issue-flow:close <numero>`. Non
-incollare la issue né il diff.
+A few lines: the closed phases with their commits (`git log --oneline`), the checkboxes left
+empty with the reason, the deviations written in the roadmap, the problems the subagents saw
+outside their perimeter, and how to continue: `/issue-flow:close <number>`. Do not paste the
+issue or the diff.
 
-Se era una figlia di un big-plan, dillo anche: quale è la figlia successiva nella madre, e che
-si comincia solo dopo il merge di questa, con `/issue-flow:close <numero> --chiudi` che spunta
-la casella sulla madre — oppure che `/issue-flow:big-implement <madre>` porta avanti tutte le
-figlie restanti senza aspettare i merge. Se la figlia è nata dal branch della madre,
-`/issue-flow:close <numero>` la unisce lì da solo, e non c'è merge da aspettare.
+If it was a child of a big-plan, say so too: which child comes next in the mother, and that it
+starts only after the merge of this one, with `/issue-flow:close <number> --merged` ticking the
+box on the mother — or that `/issue-flow:big-implement <mother>` moves all the remaining
+children forward without waiting for the merges. For a child on the mother branch,
+`/issue-flow:close <number>` merges it there by itself, and there is no merge to wait for.
 
-## Quando fermarsi davvero
+## When to really stop
 
-Fermati e chiedi, invece di proseguire, se: la stessa fase fallisce due volte; una fase
-richiede una decisione che la issue non ha preso; il lavoro tocca in modo sostanziale file
-che la issue non prevedeva; una verifica non è eseguibile su questa macchina (porta, servizio
-o credenziale mancanti); la issue è in contraddizione con il codice che trovi.
+Stop and ask, instead of carrying on, if: the same phase fails twice; a phase requires a
+decision that the issue has not taken; the work substantially touches files that the issue did
+not foresee; a verification cannot be run on this machine (missing port, service or
+credential); the issue contradicts the code you find.
 
-Prima di fermarti, `rm -f "$GOAL_DIR/goal"`: altrimenti l'hook ti rimanda al lavoro.
+Before stopping, `rm -f "$GOAL_DIR/goal"`: otherwise the hook sends you back to work.
 
-Il rimedio giusto è quasi sempre correggere la issue prima di correggere il codice.
+The right remedy is almost always to fix the issue before fixing the code.
