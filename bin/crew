@@ -1,9 +1,23 @@
 #!/bin/sh
-# Opens a Claude Code session for every profile in ~/.claude/crew/*.md
-# File name = session name; contents = appended system prompt.
+# crew [dir]       opens a terminal with a Claude Code session for every profile in ~/.claude/crew/*.md
+# crew run <name>  starts the one session of that profile, here: the single place that builds the claude command
+# `run` is the subcommand only as an exact first argument; `crew ./run` opens the crew in a directory named run.
+# File name = session name; <name>.md = appended system prompt; optional <name>.model = --model value.
 set -e
-d="${1:-$PWD}"
+self=$(readlink "$0" || echo "$0")   # ~/.local/bin/crew is a symlink (install.sh)
+root=$(CDPATH='' cd -- "$(dirname -- "$self")/.." && pwd)
+self="$root/bin/crew"
 crewdir="${CREW_DIR:-$HOME/.claude/crew}"
+
+if [ "${1:-}" = run ]; then
+  n="${2:-}"
+  f="$crewdir/$n.md"
+  [ -n "$n" ] && [ -f "$f" ] || { echo "crew: no profile '$n' in $crewdir" >&2; exit 1; }
+  m=$(cat "${f%.md}.model" 2>/dev/null | tr -d '[:space:]')
+  exec claude -n "$n" ${m:+--model "$m"} --append-system-prompt-file "$f"
+fi
+
+d=$(CDPATH='' cd -- "${1:-.}" && pwd)
 # ponytail: fixed delay, not a lock. The first session may auto-update Claude Code
 # and swap the ~/.local/bin/claude symlink; sessions started in that instant get
 # "command not found". Raise the delay if an update ever takes longer.
@@ -12,10 +26,7 @@ wait=
 for f in "$crewdir"/*.md; do
   [ -e "$f" ] || { echo "crew: no profiles in $crewdir" >&2; exit 1; }
   n=$(basename "$f" .md)
-  # optional <name>.model next to the profile: its content is the --model value
-  m=$(cat "${f%.md}.model" 2>/dev/null | tr -d '[:space:]')
-  # shellcheck disable=SC2016 # single quotes are literal inside this double-quoted string: $m expands
-  cmd="cd '$d' && ${wait}claude -n '$n'${m:+ --model '$m'} --append-system-prompt-file '$f'"
+  cmd="cd '$d' && ${wait}CREW_NO_UPDATE=1 '$self' run '$n'"
   case "$(uname -s)" in
     Darwin)
       osascript -e "tell app \"Terminal\" to do script \"$cmd\"" >/dev/null
