@@ -46,7 +46,29 @@ update() {
   # arguments, so the old text is never read again. CREW_NO_UPDATE stops it from updating a second time.
   CREW_NO_UPDATE=1 exec "$self" "$@"
 }
+
+# issue-flow@crew became crew@crew in 3.0.0. The launcher that pulls that change is the old one,
+# and it execs this one with CREW_NO_UPDATE=1, so update() never sees the pull: this runs once per
+# managed clone instead, whatever CREW_NO_UPDATE says, and crew.migrated in the clone's git config
+# remembers it. Same calls as install.sh: install before uninstall, marketplace update, never add.
+migrate() {
+  [ "$root" = "$HOME/.local/share/crew" ] || return 0
+  [ -z "$(git -C "$root" config --get crew.migrated 2>/dev/null)" ] || return 0
+  command -v claude >/dev/null 2>&1 || return 0
+  # set before the calls, so a terminal started meanwhile does not migrate twice; no retry, the warning says how
+  git -C "$root" config crew.migrated 3.0.0 2>/dev/null || return 0
+  l=$(claude plugin list --json </dev/null 2>/dev/null) || return 0
+  case $l in *'"issue-flow@crew"'*) ;; *) return 0 ;; esac
+  if claude plugin marketplace update crew </dev/null >/dev/null 2>&1 &&
+    { case $l in *'"crew@crew"'*) ;; *) claude plugin install crew@crew </dev/null >/dev/null 2>&1 ;; esac; } &&
+    claude plugin uninstall issue-flow@crew </dev/null >/dev/null 2>&1; then
+    echo "crew: issue-flow@crew replaced by crew@crew, the commands are now /crew:*; sessions already open load it after a restart"
+  else
+    echo "crew: could not replace issue-flow@crew, run: claude plugin marketplace update crew && claude plugin install crew@crew && claude plugin uninstall issue-flow@crew" >&2
+  fi
+}
 update "$@"
+migrate
 
 if [ "${1:-}" = run ]; then
   n="${2:-}"
