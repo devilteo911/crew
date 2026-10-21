@@ -145,19 +145,17 @@ green pipelines.
 
 Issue bodies, merge/pull request bodies and `ROADMAP.md` are written in English, whatever language the chat is in. With the user — summaries, questions, AskUserQuestion options, the delivery message — you talk in the language of the current chat.
 
-## 2.0.0
+## 3.0.0
 
-2.0.0 is the English release: every file of the plugin is in English, and so are the markers the
-skills write into issues. Renamed: the issue header (`**Status:**`, `**Type:**`,
-`**Planned branch:**`, `**Depends on:**`), the section names (`## Goal`, `## Context`, `## Plan`,
-`## Out of scope`; for a mother `## Architecture`, `## Decisions`, `## Issues`,
-`## How to proceed`), the phase headings (`### Phase N`, `**Done when:**`), the status values
-(`to do`, `in progress — phase N of M`, `closed — merged on DD/MM/YYYY`, …), the arguments
-(`close <n> --merged`, `plan check <n>`, `plan revise <n>`, `implement <n> --from N`) and two
-of the hook's state files (`in-flight`, `blocks`; `goal` keeps its name). The plugin, skill and
-agent names do not change. Issues and commands written for 1.x keep working: the Italian markers
-and argument spellings are still read and accepted, and `TRACKER.md` §6 has the table with both
-forms. The plugin only ever writes the English ones.
+3.0.0 renames the plugin from `issue-flow` to `crew`: the id is `crew@crew` (was
+`issue-flow@crew`), the commands are `/crew:*` (were `/issue-flow:*`), the agents
+`crew:issue-phase`, `crew:issue-runner` and `crew:issue-writer`, and the goal state lives in
+`.git/crew/` (was `.git/issue-flow/`). The 1.x compatibility is dropped: the Italian markers
+(`**Stato:**`, `**Tipo:**`, `## Piano`, `### Fase N`, …) and the old arguments (`--chiudi`,
+`spunta`, `rivedi`, `--da N`) are no longer read; the English markers of 2.0.0 are listed in
+`TRACKER.md` §6. The plugin is a fork of
+[Issues-Master-Skills](https://github.com/MatteoSid/Issues-Master-Skills) from `2305db3`. How
+to migrate a machine: [crew's README, "The crew plugin"](../../README.md#the-crew-plugin).
 
 ## GitLab and GitHub
 
