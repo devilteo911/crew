@@ -24,11 +24,11 @@ clone="$HOME/.local/share/crew"
 
 # --- stubs ---------------------------------------------------------------------------------
 
-# claude: one log line "<cwd> <args>"; the plugin list says issue-flow@crew is installed
+# claude: one log line "<cwd> <args>"; the plugin list says crew@crew is installed
 cat >"$t/bin/claude" <<EOF
 #!/bin/sh
 printf '%s\n' "\$PWD \$*" >>"$t/claude.log"
-if [ "\$*" = "plugin list --json" ]; then echo '[{"id":"issue-flow@crew"}]'; fi
+if [ "\$*" = "plugin list --json" ]; then echo '[{"id":"crew@crew"}]'; fi
 exit 0
 EOF
 # term: used through TERMINAL, drops its -e and runs the rest (SHELL=/bin/true ends it at once)
@@ -88,7 +88,7 @@ wait_sessions() { # <lines already in the log> <how many new sessions>: up to 15
 }
 plugin_refresh_first() { # both plugin commands are in the log, before the first session
   awk '/plugin marketplace update crew/ && !m { m = NR }
-       /plugin update issue-flow@crew/ && !u { u = NR }
+       /plugin update crew@crew/ && !u { u = NR }
        / -n / && !s { s = NR }
        END { exit !(m && u && s && m < s && u < s) }' "$t/claude.log"
 }
@@ -197,13 +197,13 @@ check "A: a second installer run does not say it rewrote the entry" "$s"
 # =============================================================================================
 echo "== B: self-update (origin gets ciurma on haiku and a new plugin version)"
 printf 'haiku\n' >"$t/work/prompts/ciurma.model"
-pj="$t/work/plugins/issue-flow/.claude-plugin/plugin.json"
+pj="$t/work/plugins/crew/.claude-plugin/plugin.json"
 sed 's/"version": *"[^"]*"/"version": "99.0.0"/' "$pj" >"$t/pj.new" || die "setup: bump the plugin version"
 cat "$t/pj.new" >"$pj"
-if g -C "$t/work" diff --quiet -- plugins/issue-flow/.claude-plugin/plugin.json; then
+if g -C "$t/work" diff --quiet -- plugins/crew/.claude-plugin/plugin.json; then
   die "setup: plugin.json has no version to bump"
 fi
-origin_commit "test: ciurma on haiku, new issue-flow version"
+origin_commit "test: ciurma on haiku, new crew plugin version"
 want=$(g -C "$t/origin.git" rev-parse refs/heads/main)
 
 mkdir "$t/proj" || die "setup: project directory"
@@ -215,8 +215,8 @@ is "$(g -C "$clone" rev-parse HEAD)" = "$want"
 check "B: the managed clone is at the new origin/main" $?
 is "$(grep -cF 'plugin marketplace update crew' "$t/claude.log")" -eq 1
 check "B: 'claude plugin marketplace update crew' runs once" $?
-is "$(grep -cF 'plugin update issue-flow@crew' "$t/claude.log")" -eq 1
-check "B: 'claude plugin update issue-flow@crew' runs once" $?
+is "$(grep -cF 'plugin update crew@crew' "$t/claude.log")" -eq 1
+check "B: 'claude plugin update crew@crew' runs once" $?
 plugin_refresh_first
 check "B: both plugin commands run before the first session" $?
 new_has "$n0" "$t/proj -n sottoposto --model opus --append-system-prompt-file $HOME/.claude/crew/sottoposto.md"

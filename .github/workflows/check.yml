@@ -16,11 +16,11 @@ jobs:
           fetch-depth: 0 # tests/e2e.sh needs 4341dd2 in the history
       - name: shellcheck
         # ponytail: pinned image, not the runner's apt shellcheck (0.9.0 on 24.04, 0.11.0 on 26.04)
-        run: docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0 bin/crew install.sh tests/e2e.sh plugins/issue-flow/scripts/*.sh
+        run: docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0 bin/crew install.sh tests/e2e.sh plugins/crew/scripts/*.sh
       - name: e2e
         run: sh tests/e2e.sh
       - name: claude plugin validate
         run: |
           npm i -g @anthropic-ai/claude-code
           claude plugin validate --strict .
-          claude plugin validate --strict plugins/issue-flow
+          claude plugin validate --strict plugins/crew
