@@ -32,8 +32,6 @@ that one.
 /crew:close                     # infers the number from the current branch
 ```
 
-The 1.x argument `--chiudi` is still accepted in place of `--merged` (`TRACKER.md` §6).
-
 ## 0. Which tracker, and does it answer
 
 GitLab (`glab`) or GitHub (`gh`) according to `git remote get-url origin`; the command mapping
@@ -52,16 +50,15 @@ it is interactive.
 
 ## 0 bis. Which case
 
-Re-read the issue from the server and look at the top of the body (both spellings of the
-markers are in `TRACKER.md` §6). The case decides the **base** — the branch the MR/PR points
-to — and who merges it:
+Re-read the issue from the server and look at the top of the body. The case decides the
+**base** — the branch the MR/PR points to — and who merges it:
 
 | case | how you recognise it | base | merge |
 |---|---|---|---|
-| **issue** | no `**Type:**` (`**Tipo:**` on a 1.x issue) and no `**Roadmap:**` | target branch | the user |
+| **issue** | no `**Type:**` and no `**Roadmap:**` | target branch | the user |
 | **child** | `**Roadmap:** #<mother>`, and the mother branch is **not** on `origin` | target branch | the user |
 | **child on the mother branch** | `**Roadmap:** #<mother>`, and the mother branch is on `origin` | mother branch | this skill, at step 3 bis |
-| **mother** | `**Type:** roadmap` (`**Tipo:** roadmap` on a 1.x issue), and the mother branch is on `origin` | target branch | the user |
+| **mother** | `**Type:** roadmap`, and the mother branch is on `origin` | target branch | the user |
 
 The target branch is `${user_config.default_branch}`, or what
 `git symbolic-ref --short refs/remotes/origin/HEAD | sed 's#^origin/##'` returns. The mother
@@ -99,9 +96,9 @@ grep -c '^[[:space:]]*- \[[xX]\]'  "$SCRATCH/roadmap.md"   # ticked
 grep -n  '^[[:space:]]*- \[ \]'    "$SCRATCH/roadmap.md"   # the ones left
 ```
 
-For the **mother** the boxes are those of the **Issues** section (`## Issues`, or `## Issue` on
-a 1.x issue), one per child, and they count like the others: all ticked means all the children
-merged into the mother branch. Also check that every child is closed on the tracker; a box
+For the **mother** the boxes are those of the **Issues** section (`## Issues`), one per
+child, and they count like the others: all ticked means all the children merged into the
+mother branch. Also check that every child is closed on the tracker; a box
 ticked on an open child, or the opposite, is a mother that fell behind and has to be fixed
 first.
 
@@ -226,14 +223,11 @@ glab issue view <number> --output json --jq '.description' > "$SCRATCH/roadmap.m
 # GitHub
 gh issue view <number> --json body --jq '.body' > "$SCRATCH/roadmap.md" && sed -i 's/\r$//' "$SCRATCH/roadmap.md"
 
-# you touch only the status line: `**Status:**`, or `**Stato:**` on a 1.x issue
+# you touch only the status line: `**Status:**`
 
 glab issue update <number> --description-file "$SCRATCH/roadmap.md"   # GitLab
 gh   issue edit   <number> --body-file        "$SCRATCH/roadmap.md"   # GitHub
 ```
-
-On a 1.x issue the English value goes on the status line that is already there, and you never
-add a second one (`TRACKER.md` §6).
 
 For the **child on the mother branch** you do not stop here: go on with step 3 bis. In the
 other cases the skill ends with the MR/PR open, and goes on when the user comes back with
@@ -318,7 +312,7 @@ glab issue view <mother> --output json --jq '.description' > "$SCRATCH/mother.md
 # GitHub
 gh issue view <mother> --json body --jq '.body' > "$SCRATCH/mother.md" && sed -i 's/\r$//' "$SCRATCH/mother.md"
 
-# turn into `- [x]` ONLY the `- [ ] #<number>` line of the Issues section (`## Issues`, or `## Issue` on a 1.x mother)
+# turn into `- [x]` ONLY the `- [ ] #<number>` line of the Issues section (`## Issues`)
 # bring the mother's status line to `in progress — k of M issues merged`
 
 glab issue update <mother> --description-file "$SCRATCH/mother.md"   # GitLab

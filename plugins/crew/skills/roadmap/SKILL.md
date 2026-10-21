@@ -120,10 +120,9 @@ Always, with or without research-flow:
 
 The open issues, with a high `--limit` on GitHub (`TRACKER.md` §5):
 
-- the open **mothers** — `**Type:** roadmap` at the top of the body, or `**Tipo:** roadmap` on a
-  1.x issue (`TRACKER.md` §6) — with the children not yet ticked: it is work already planned. It
-  is not to be re-proposed: the roadmap cites it as **already open** and starts from after it,
-  or leans on it as a dependency;
+- the open **mothers** — `**Type:** roadmap` at the top of the body — with the children not
+  yet ticked: it is work already planned. It is not to be re-proposed: the roadmap cites it
+  as **already open** and starts from after it, or leans on it as a dependency;
 - the single open issues: if a step you are about to propose already has its issue, the step
   cites it instead of duplicating it.
 - **the issues the sources cite** — "in progress (#29)", "still to merge #48" — are checked on

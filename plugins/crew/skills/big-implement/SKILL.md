@@ -77,20 +77,18 @@ Identical to step 0 of `implement`.
 ## 1. Read the mother and work out the chain
 
 Read the mother from the server as in step 1 of `implement`. If the top of the body does not have
-`**Type:** roadmap` (or `**Tipo:** roadmap` on a 1.x issue), it is not a mother: say so and
-propose `/crew:implement <number>`. Both spellings are in `TRACKER.md` §6.
+`**Type:** roadmap`, it is not a mother: say so and propose `/crew:implement <number>`.
 
-From the **Issues** section (`## Issues`, or `## Issue` on a 1.x issue), in order, take the
-`- [ ] #<n>` lines: they are the children to carry forward. The `- [x]` ones are already merged —
+From the **Issues** section (`## Issues`), in order, take the `- [ ] #<n>` lines: they are the
+children to carry forward. The `- [x]` ones are already merged —
 into the mother branch or, from a round done by hand, into the target branch — and are not
 touched. For each child still to do, look on the tracker:
 
 - **the state**: if it is already closed but the box is empty, the mother has fallen behind —
   flag it, do not re-run it, and treat it as merged;
-- **the dependencies** — `· depends on #<k>` in the mother (`· dipende da #<k>` on a 1.x issue),
-  `**Depends on:**` in the child (`**Dipende da:**`): each one must be merged (box ticked or
-  issue closed) **or** a child that this run carries forward **before** it. A dependency in
-  neither case — an open external issue, a sibling that comes later in the order — is a roadmap
+- **the dependencies** — `· depends on #<k>` in the mother, `**Depends on:**` in the child:
+  each one must be merged (box ticked or issue closed) **or** a child that this run carries
+  forward **before** it. A dependency in neither case — an open external issue, a sibling that comes later in the order — is a roadmap
   that does not hold: stop and say so;
 - **whether it has already started** in a previous round: the branch
   `${user_config.branch_prefix}<n>` exists, has ticked checkboxes, already has an MR/PR
@@ -135,8 +133,7 @@ If the branch already existed from a previous round, align it to `origin` with
 mother branch is realigned only once, at step 5 — in `close` on the mother —, where a conflict
 is the user's decision.
 
-Bring the mother's **Status:** line to `in progress — k of M issues merged into <mother-branch>`
-(on a 1.x mother, on the status line that is already there — `TRACKER.md` §6).
+Bring the mother's **Status:** line to `in progress — k of M issues merged into <mother-branch>`.
 
 ## 3. The goal covers the whole project
 
@@ -271,7 +268,7 @@ Then move on to the next child.
 
 ## 5. The mother's MR/PR
 
-When all the boxes of the mother's **Issues** section (`## Issue` on a 1.x issue) are ticked,
+When all the boxes of the mother's **Issues** section are ticked,
 `close` on the mother, in its "mother" case: it redoes the verification on the final tree of the
 mother branch, aligns the documentation, pushes and opens the MR/PR
 `mother branch → target branch` with `Closes #<mother>`. **Never the merge**: the user approves

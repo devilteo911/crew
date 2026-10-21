@@ -229,7 +229,7 @@ Not with this skill. The children are executed **one at a time, in order**, with
 and then the next child, which starts from the target branch with the work of the previous ones
 in it. The mother's box is ticked **when the child is merged**, not when it is implemented:
 `/crew:close --merged` does it, and it closes the mother too when the last box is
-ticked. The 1.x spellings of the renamed arguments are still accepted (`TRACKER.md` §6).
+ticked.
 
 Or all at once with `/crew:big-implement <mother>`: the same round, one child at a time,
 on the mother branch — each child is born from there and goes back in with its MR/PR, which

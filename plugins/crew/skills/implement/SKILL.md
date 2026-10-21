@@ -24,8 +24,7 @@ foresee, and no work it foresees is skipped.
 /crew:implement                   # infers the number from the current branch
 ```
 
-`--from N` resumes at `### Phase N` (`### Fase N` on a 1.x issue). The 1.x argument `--da N` is
-still accepted (`TRACKER.md` §6).
+`--from N` resumes at `### Phase N`.
 
 ## You are the orchestrator, and you stay one
 
@@ -99,36 +98,34 @@ jq -r '.body'  "$SCRATCH/issue.json" | sed 's/\r$//' > "$SCRATCH/roadmap.md"
 Check that `roadmap.md` is not empty before going on: if it is, you picked the other
 platform's field.
 
-If the top of the body has `**Type:** roadmap` or `**Tipo:** roadmap`, it is the mother of a
+If the top of the body has `**Type:** roadmap`, it is the mother of a
 `/crew:big-plan` and it is not implemented: go to step 1 bis. If it has
 `**Roadmap:** #<mother>`, it is a child: everything that follows applies, plus step 1 ter
-before the branch. Both spellings are in `TRACKER.md` §6.
+before the branch.
 
-Read all of it, not just the Plan: **Goal**, **Context** and **Out of scope** — on a 1.x issue
-**Obiettivo**, **Contesto** and **Fuori perimetro** — are what keeps the subagents from
-reinventing decisions already made, and they must be passed to them.
+Read all of it, not just the Plan: **Goal**, **Context** and **Out of scope** are what keeps
+the subagents from reinventing decisions already made, and they must be passed to them.
 
 Then work out, and tell the user before starting:
 
 - the working branch, `${user_config.branch_prefix}<number>` — with the default `issue-`,
   issue #12 is worked on `issue-12`;
-- the list of phases (the `###` inside `## Plan`, or `## Piano` on a 1.x issue) with how many
+- the list of phases (the `###` inside `## Plan`) with how many
   checkboxes each has and how many are already ticked, and which phase you resume from;
 - if the issue has no phases with checkboxes, **stop**: it is not an executable issue. Report
   it and propose `/crew:plan revise <number>`.
 
 ## 1 bis. The mother: which child is next
 
-Children are run **one at a time, in order**. In the mother's **Issues** section (`## Issues`,
-or `## Issue` on a 1.x issue), the first unchecked `- [ ] #<n>` line is the child to run:
+Children are run **one at a time, in order**. In the mother's **Issues** section (`## Issues`),
+the first unchecked `- [ ] #<n>` line is the child to run:
 
 ```bash
 grep -n '^[[:space:]]*- \[ \] #[0-9]' "$SCRATCH/roadmap.md" | head -1
 ```
 
 Before taking it, check that the children it depends on — the `· depends on #<k>` line in the
-mother (`· dipende da #<k>` on a 1.x issue), `**Depends on:**` in the child
-(`**Dipende da:**`) — are **closed** on the tracker
+mother, `**Depends on:**` in the child — are **closed** on the tracker
 (`glab issue view <k> --output json --jq '.state'` → `closed`, `gh issue view <k> --json state
 --jq '.state'` → `CLOSED`). A child with a dependency still open is not started: tell the user
 and say which one has to be closed first — usually an MR/PR waiting to be merged.
@@ -207,8 +204,7 @@ not seen the conversation and has not read the issue: **what you do not write to
 exist**. The prompt must contain, in full and not summarised:
 
 - number and title of the issue, and the branch you are working on;
-- the **Goal**, **Context** and **Out of scope** sections of the issue (**Obiettivo**,
-  **Contesto** and **Fuori perimetro** on a 1.x issue);
+- the **Goal**, **Context** and **Out of scope** sections of the issue;
 - the phase number and its **full text**: lead-in, list of files, all the checkboxes with the
   code snippets under them, the "Done when" line;
 - what the previous phases left behind, if they deviated from the written plan.
@@ -259,9 +255,6 @@ sed -i 's/\r$//' "$SCRATCH/roadmap.md"
 glab issue update <number> --description-file "$SCRATCH/roadmap.md"   # GitLab
 gh   issue edit   <number> --body-file        "$SCRATCH/roadmap.md"   # GitHub
 ```
-
-On a 1.x issue, write the English value on the status line that is already there, and never add
-a second one (`TRACKER.md` §6).
 
 **Always re-read the body from the server before rewriting it**, never from a copy kept in the
 conversation: the update replaces the whole field and does not merge, so an old version erases

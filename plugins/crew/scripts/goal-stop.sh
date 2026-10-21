@@ -46,8 +46,8 @@ for number in $numbers; do
   fi
   [ -n "$body" ] || warn "cannot read issue #$number from the tracker: goal not verified"
 
-  # only the boxes of the Plan (the legacy "## Piano" is still read); without a Plan section, the whole body
-  plan=$(awk '/^## /{inside = ($0 ~ /^## (Plan|Piano)/)} inside' <<<"$body")
+  # only the boxes of the Plan; without a Plan section, the whole body
+  plan=$(awk '/^## /{inside = ($0 ~ /^## Plan/)} inside' <<<"$body")
   [ -n "$plan" ] || plan=$body
   n=$(grep -c '^[[:space:]]*- \[ \]' <<<"$plan")
   if [ "$n" -gt 0 ] && [ -z "$first" ]; then

@@ -32,8 +32,6 @@ variants, but the traps (the body field that changes name, the `--limit` of
 /crew:plan revise <n>                    # reopen the plan of an issue and rewrite it
 ```
 
-The 1.x arguments `spunta` and `rivedi` are still accepted as `check` and `revise` (`TRACKER.md` §6).
-
 ## The principle that decides everything else
 
 **The issue must be executable by an agent that did not attend the conversation.**
@@ -324,8 +322,6 @@ When all of an issue's checkboxes are ticked and the work is merged, it gets clo
 `closed — merged on DD/MM/YYYY`. On GitHub it may have already closed by itself, if the PR carried
 `Closes #<n>`: look at the state before saying you closed it.
 
-On a 1.x issue, rewrite the value on the status line that is already there, and never add a second one (`TRACKER.md` §6).
-
 ## Who runs the issue
 
 Not this skill: `/crew:implement <n>` picks it up, sends one phase per subagent and ticks
@@ -345,8 +341,6 @@ Dense prose, technical terms and identifiers in the original. Sentences that car
 information: the *why* of a choice, not its paraphrase.
 
 Issue bodies, merge/pull request bodies and `ROADMAP.md` are written in English, whatever language the chat is in. With the user — summaries, questions, AskUserQuestion options, the delivery message — you talk in the language of the current chat. The option labels quoted in these skills are given in English: render them in that language.
-
-`revise` on a 1.x issue rewrites the body in English with the English markers (`TRACKER.md` §6).
 
 - no estimates in hours or days, no story points, no percentages;
 - no `TBD`, `to be defined`, `consider whether`: if a decision has not been made, make it now or

@@ -137,19 +137,19 @@ only by `/crew:close --merged`, and the count that matters stays the one in the 
 `--title` and `--body-file` (and `--head` for the PR, with the branch already pushed) it asks
 nothing.
 
-## 6. Markers and arguments — English, 1.x Italian still read
+## 6. Markers and arguments
 
-| | 2.x writes | 1.x form, still read / accepted |
-|---|---|---|
-| header | `- **Status:**` | `- **Stato:**` |
-| header (mother) | `- **Type:** roadmap` | `- **Tipo:** roadmap` |
-| header | `- **Planned branch:**` | `- **Branch previsto:**` |
-| header (child) | `- **Depends on:** #<k>` | `- **Dipende da:** #<k>` |
-| header (child) | `- **Roadmap:** #<n>` | same |
-| mother's child line | `· depends on #<k>` | `· dipende da #<k>` |
-| sections | `## Goal`, `## Context`, `## Plan`, `## Out of scope`, `## How to update this roadmap` | `## Obiettivo`, `## Contesto`, `## Piano`, `## Fuori perimetro`, `## Come si aggiorna questa roadmap` |
-| mother sections | `## Architecture`, `## Decisions`, `## Issues`, `## How to proceed` | `## Architettura`, `## Decisioni`, `## Issue`, `## Come si avanza` |
-| phases | `### Phase N — <title>`, `**Done when:**` | `### Fase N — <titolo>`, `**Fatto quando:**` |
-| arguments | `close <n> --merged`, `plan check <n>`, `plan revise <n>`, `implement <n> --from N` | `--chiudi`, `spunta`, `rivedi`, `--da N` |
+| | Marker |
+|---|---|
+| header | `- **Status:**` |
+| header (mother) | `- **Type:** roadmap` |
+| header | `- **Planned branch:**` |
+| header (child) | `- **Depends on:** #<k>` |
+| header (child) | `- **Roadmap:** #<n>` |
+| mother's child line | `· depends on #<k>` |
+| sections | `## Goal`, `## Context`, `## Plan`, `## Out of scope`, `## How to update this roadmap` |
+| mother sections | `## Architecture`, `## Decisions`, `## Issues`, `## How to proceed` |
+| phases | `### Phase N — <title>`, `**Done when:**` |
+| arguments | `close <n> --merged`, `plan check <n>`, `plan revise <n>`, `implement <n> --from N` |
 
-The rule: read either form, write only the English one. On a 1.x issue, rewrite the value on the status line that is already there, and never add a second one.
+The skills write and read only these. An issue written with other markers is not recognised: rewrite it with these by hand.
