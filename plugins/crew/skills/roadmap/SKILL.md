@@ -1,12 +1,12 @@
 ---
 name: roadmap
-description: "Proposes the roadmap of a project's next steps by reading its documentation — the research-flow registers if the repo has them, otherwise README, CLAUDE.md, docs, a previous ROADMAP.md — plus the open issues on the tracker and the state of the code. Each step has its source, its order and its dependencies, and is sized as one issue. Once approved, it saves the roadmap as ROADMAP.md in the repo root or hands it to /issue-flow:big-plan, which creates all the issues. Trigger: /issue-flow:roadmap, 'what are the next steps?', 'propose a roadmap', 'what do we do now?', 'where do we pick up from?'."
+description: "Proposes the roadmap of a project's next steps by reading its documentation — the research-flow registers if the repo has them, otherwise README, CLAUDE.md, docs, a previous ROADMAP.md — plus the open issues on the tracker and the state of the code. Each step has its source, its order and its dependencies, and is sized as one issue. Once approved, it saves the roadmap as ROADMAP.md in the repo root or hands it to /crew:big-plan, which creates all the issues. Trigger: /crew:roadmap, 'what are the next steps?', 'propose a roadmap', 'what do we do now?', 'where do we pick up from?'."
 argument-hint: "[optional focus: an area, a goal, a milestone]"
 ---
 
-# /issue-flow:roadmap
+# /crew:roadmap
 
-`/issue-flow:plan` and `/issue-flow:big-plan` start from a request: someone already knows what
+`/crew:plan` and `/crew:big-plan` start from a request: someone already knows what
 they want to do. This skill comes before, when the question is **what do we do now**. It reads
 what the project knows about itself — the documentation, the open issues, the code — and
 proposes the next steps in order, each with the reason it is there and the source it comes from.
@@ -14,7 +14,7 @@ proposes the next steps in order, each with the reason it is there and the sourc
 The approved roadmap has two outputs, at the user's choice:
 
 - **a file**, `ROADMAP.md` in the repo root, to keep and re-read;
-- **the issues**: the skill hands the roadmap to `/issue-flow:big-plan`, which makes it a
+- **the issues**: the skill hands the roadmap to `/crew:big-plan`, which makes it a
   mother issue and one child per step, each written complete.
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/plan/SKILL.md` — the `plan` skill of this plugin — for how to
@@ -24,8 +24,8 @@ the two platforms. **Read them before the first command.**
 ## Usage
 
 ```
-/issue-flow:roadmap                      # the project's next steps, from all the documentation
-/issue-flow:roadmap <focus>              # only an area or a milestone: "the frontend", "going live"
+/crew:roadmap                      # the project's next steps, from all the documentation
+/crew:roadmap <focus>              # only an area or a milestone: "the frontend", "going live"
 ```
 
 ## The principle
@@ -177,7 +177,7 @@ The rules:
   the two branches, one line each, under **After**. Planning in detail beyond an outcome you do
   not know is guessing;
 - **3 to 8 steps.** Fewer than 3 is not a roadmap: with a single step propose
-  `/issue-flow:plan`, with two consider whether they are a single issue. More than 8 means the
+  `/crew:plan`, with two consider whether they are a single issue. More than 8 means the
   horizon is too long: the steps beyond the eighth go under **After**;
 - **for each step**: a title that says what changes for whoever uses the product — like an
   issue's title —, what it delivers, why it is there with the sources (`TODO-012`, `ESP-031`,
@@ -236,9 +236,9 @@ research-flow and the roadmap diverges from §«Prossimi passi» of the official
 
 ### 6b. Create the issues with `big-plan`
 
-Load the `issue-flow:big-plan` skill with the `Skill` tool, in the same conversation. From that
+Load the `crew:big-plan` skill with the `Skill` tool, in the same conversation. From that
 moment `big-plan` applies, which knows it comes from here (its section "When you arrive from
-`/issue-flow:roadmap`") and reuses what you have already done: the verified tracker, the
+`/crew:roadmap`") and reuses what you have already done: the verified tracker, the
 sources read, the approved roadmap as the draft of the split into children.
 
 In the handover these must arrive, already written in the conversation in the summary of step 5:
@@ -254,8 +254,8 @@ In the handover these must arrive, already written in the conversation in the su
 ### 7. Delivery
 
 For the file output: the file's path, what changed from the previous roadmap, the
-inconsistencies found between sources and code, and how to start — `/issue-flow:plan` on the
-first step, or `/issue-flow:roadmap` again with "create the issues" once the forks are decided.
+inconsistencies found between sources and code, and how to start — `/crew:plan` on the
+first step, or `/crew:roadmap` again with "create the issues" once the forks are decided.
 
 For the issues output the delivery is done by `big-plan`.
 

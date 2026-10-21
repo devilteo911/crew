@@ -1,4 +1,4 @@
-# Issue Flow
+# The crew plugin
 
 From the request to the merge request, by way of an issue that holds the plan **and** the
 roadmap that carries it out. Six skills that hand the work to one another, on **GitLab** (`glab`)
@@ -11,26 +11,26 @@ out of scope.
 
 | skill | what it does |
 |---|---|
-| `/issue-flow:roadmap` | **what do we do now**: reads the project's documentation — the [research-flow](https://github.com/MatteoSid/Research-Master-Skills) registers if there are any, otherwise README, CLAUDE.md, docs — plus the open issues and the code, and proposes the next steps with their sources; once approved, it saves them in `ROADMAP.md` or creates their issues with `big-plan` |
-| `/issue-flow:plan` | **one feature**: code reconnaissance, design forks put to the user, then opens the issue with the plan and a checkbox roadmap inside |
-| `/issue-flow:big-plan` | **a large development**: defines the project roadmap in a mother issue and splits it into child issues, each written complete by a subagent |
-| `/issue-flow:implement` | runs the roadmap one phase per subagent, ticks the boxes as it goes, one commit per phase; works like a `/goal` and does not stop until the roadmap is complete; on a mother issue it takes the first open child |
-| `/issue-flow:big-implement` | runs all the children of a mother in one go on the mother's branch: one at a time, in order, each handed to a subagent that goes through `implement` and `close` and merges it into the mother branch on its own; at the end it opens the mother's MR/PR, which you merge |
-| `/issue-flow:close` | verifies the final tree, opens the MR/PR, and once merged closes the issue and ticks it on the mother; a child of a project with a mother branch is merged there on its own |
+| `/crew:roadmap` | **what do we do now**: reads the project's documentation — the [research-flow](https://github.com/MatteoSid/Research-Master-Skills) registers if there are any, otherwise README, CLAUDE.md, docs — plus the open issues and the code, and proposes the next steps with their sources; once approved, it saves them in `ROADMAP.md` or creates their issues with `big-plan` |
+| `/crew:plan` | **one feature**: code reconnaissance, design forks put to the user, then opens the issue with the plan and a checkbox roadmap inside |
+| `/crew:big-plan` | **a large development**: defines the project roadmap in a mother issue and splits it into child issues, each written complete by a subagent |
+| `/crew:implement` | runs the roadmap one phase per subagent, ticks the boxes as it goes, one commit per phase; works like a `/goal` and does not stop until the roadmap is complete; on a mother issue it takes the first open child |
+| `/crew:big-implement` | runs all the children of a mother in one go on the mother's branch: one at a time, in order, each handed to a subagent that goes through `implement` and `close` and merges it into the mother branch on its own; at the end it opens the mother's MR/PR, which you merge |
+| `/crew:close` | verifies the final tree, opens the MR/PR, and once merged closes the issue and ticks it on the mother; a child of a project with a mother branch is merged there on its own |
 
-Plus three subagents: `issue-flow:issue-phase`, which runs a single phase and can neither commit
+Plus three subagents: `crew:issue-phase`, which runs a single phase and can neither commit
 nor touch the issue — the orchestrator does that, after checking the real output —;
-`issue-flow:issue-runner`, which for `big-implement` takes a child from its branch to the merge
+`crew:issue-runner`, which for `big-implement` takes a child from its branch to the merge
 into the mother branch, orchestrating its phases with one `issue-phase` each, so the main
 session's context stays the project's and does not fill up with the phases of every child; and
-`issue-flow:issue-writer`, which writes the body of a `big-plan` child issue into a file and
+`crew:issue-writer`, which writes the body of a `big-plan` child issue into a file and
 cannot create issues: the orchestrator creates them, in order, after checking them.
 
 ## Installation
 
 ```
 /plugin marketplace add devilteo911/crew
-/plugin install issue-flow@crew
+/plugin install crew@crew
 ```
 
 The `marketplace add` clones with the machine's git credentials, so SSH works too:
@@ -54,7 +54,7 @@ set when you enable the plugin, or with `claude plugin install --config key=valu
 | `docs_paths` | from the project | the documentation that the closing phase re-reads |
 | `figma_file` | empty | the id of the Figma file to align before the code; empty = no Figma phase |
 
-When `verify_commands` and `docs_paths` are not set, `/issue-flow:plan` derives them during the
+When `verify_commands` and `docs_paths` are not set, `/crew:plan` derives them during the
 reconnaissance — `package.json` scripts, `Makefile` targets, `pyproject.toml`, CI jobs — and
 **writes them into the issue**, so the verification phase has real commands instead of a generic
 "run the tests". If the project has a `CLAUDE.md`, it usually says them already.
@@ -64,10 +64,10 @@ reconnaissance — `package.json` scripts, `Makefile` targets, `pyproject.toml`,
 To know where to pick up from:
 
 ```
-/issue-flow:roadmap                  →  proposes the next steps, each with its source
+/crew:roadmap                  →  proposes the next steps, each with its source
                                         once approved: ROADMAP.md in the root, or
                                         big-plan makes the mother and one child per step
-/issue-flow:roadmap the frontend     →  only the steps of one area or milestone
+/crew:roadmap the frontend     →  only the steps of one area or milestone
 ```
 
 `roadmap` reads the research-flow registers when the repo has `.research-flow.json` — the
@@ -81,20 +81,20 @@ the two branches in one line.
 For a feature:
 
 ```
-/issue-flow:plan add a date filter to the list                   →  opens issue #12
-/issue-flow:implement 12                                         →  branch issue-12, one commit per phase
-/issue-flow:close 12                                             →  opens the MR/PR
-/issue-flow:close 12 --merged                                    →  once merged, closes the issue
+/crew:plan add a date filter to the list                   →  opens issue #12
+/crew:implement 12                                         →  branch issue-12, one commit per phase
+/crew:close 12                                             →  opens the MR/PR
+/crew:close 12 --merged                                    →  once merged, closes the issue
 ```
 
 For a development that does not fit in one issue:
 
 ```
-/issue-flow:big-plan notification system with user preferences   →  mother #20, children #21 #22 #23
-/issue-flow:implement 20                                         →  takes the first open child, #21
-/issue-flow:close 21                                             →  opens the MR/PR of #21
-/issue-flow:close 21 --merged                                    →  closes #21 and ticks it on #20
-/issue-flow:implement 20                                         →  now it is #22's turn, and so on
+/crew:big-plan notification system with user preferences   →  mother #20, children #21 #22 #23
+/crew:implement 20                                         →  takes the first open child, #21
+/crew:close 21                                             →  opens the MR/PR of #21
+/crew:close 21 --merged                                    →  closes #21 and ticks it on #20
+/crew:implement 20                                         →  now it is #22's turn, and so on
 ```
 
 The children are run one at a time, each with its own branch and its own MR/PR, and each starts
@@ -102,30 +102,30 @@ from the target branch with the previous ones already merged. Or all at once, wi
 for the merges:
 
 ```
-/issue-flow:big-implement 20      →  branch issue-20 from main; #21, #22, #23 are born from issue-20
+/crew:big-implement 20      →  branch issue-20 from main; #21, #22, #23 are born from issue-20
                                      and merge back into it on their own; then the MR/PR issue-20 → main
-/issue-flow:close 20 --merged     →  after you have merged the mother's MR/PR: closes #20
+/crew:close 20 --merged     →  after you have merged the mother's MR/PR: closes #20
 ```
 
 Every child goes through `close` as usual — verification on the final tree, documentation,
 MR/PR — but towards the mother's branch, and there the plugin merges it on its own: it is the
 project's worksite, not the product. Only the mother's MR/PR reaches the target branch, and the
 plugin never merges that one: you approve it and merge it. You do not need to know in advance
-which of the two to use: `/issue-flow:plan` always checks whether the request fits in one issue,
+which of the two to use: `/crew:plan` always checks whether the request fits in one issue,
 and when it does not it stops, warns with the measured numbers and a draft split, and proposes
 how to proceed — switch to `big-plan` (which restarts from the reconnaissance already done),
 open only the first issue, narrow the scope, or keep a single issue anyway.
 
 Each one picks up on its own after a `/clear`: the state lives in the issue's checkboxes, not in
-the conversation. `/issue-flow:implement` without a number infers it from the current branch.
+the conversation. `/crew:implement` without a number infers it from the current branch.
 
-`/issue-flow:implement` and `/issue-flow:big-implement` do not need `/goal`: they carry a `Stop`
+`/crew:implement` and `/crew:big-implement` do not need `/goal`: they carry a `Stop`
 hook (`scripts/goal-stop.sh`) that at every turn end re-reads the issue from the tracker and
 sends the work back on as long as the `## Plan` section has an unchecked box or the last phase
 is not committed. They stop earlier only for an explicit decision — a phase that failed twice, a
 choice the issue did not make — and say so. With `big-implement` the goal covers all the
 children of the project and the mother, up to the last merge into the mother branch. The goal's
-state lives in `.git/issue-flow/` (the files `goal`, `in-flight` and `blocks`), outside the
+state lives in `.git/crew/` (the files `goal`, `in-flight` and `blocks`), outside the
 commits.
 
 ## The three rules the plugin does not negotiate

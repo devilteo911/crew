@@ -1,6 +1,6 @@
 ---
 name: issue-writer
-description: Writes the body of ONE child issue of a project roadmap (GitLab or GitHub). Receives the mother issue's roadmap and the child's position, does the code reconnaissance and writes the complete body — plan, phases, checkboxes — to a file in the scratchpad. Does not create issues on the tracker. Use it when you split a development into issues with /issue-flow:big-plan.
+description: Writes the body of ONE child issue of a project roadmap (GitLab or GitHub). Receives the mother issue's roadmap and the child's position, does the code reconnaissance and writes the complete body — plan, phases, checkboxes — to a file in the scratchpad. Does not create issues on the tracker. Use it when you split a development into issues with /crew:big-plan.
 disallowedTools: "Edit, NotebookEdit, Bash(git commit:*), Bash(git push:*), Bash(git reset:*), Bash(git checkout:*), Bash(git switch:*), Bash(git stash:*), Bash(glab issue create:*), Bash(glab issue update:*), Bash(glab issue close:*), Bash(glab mr:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh issue close:*), Bash(gh pr:*)"
 ---
 

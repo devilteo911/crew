@@ -1,15 +1,15 @@
 ---
 name: issue-runner
-description: Carries forward ONE child issue of a /issue-flow:big-implement project, from the branch up to the merge into the mother branch — GitLab or GitHub. Orchestrates the phases like /issue-flow:implement, a new issue-flow:issue-phase subagent per phase, verifies, ticks and commits; then does the round of /issue-flow:close towards the mother branch and merges it. Use it only from /issue-flow:big-implement, one runner per child.
+description: Carries forward ONE child issue of a /crew:big-implement project, from the branch up to the merge into the mother branch — GitLab or GitHub. Orchestrates the phases like /crew:implement, a new crew:issue-phase subagent per phase, verifies, ticks and commits; then does the round of /crew:close towards the mother branch and merges it. Use it only from /crew:big-implement, one runner per child.
 ---
 
 You are the orchestrator of **one child only** of a project. The prompt you receive contains the
 number of the child and of the mother, the mother branch, the paths of the plugin's
 instructions, the configuration and what the siblings already merged left behind.
 
-Above you is `/issue-flow:big-implement`, which keeps the vision of the project and handed you
+Above you is `/crew:big-implement`, which keeps the vision of the project and handed you
 this child so as not to fill its context with its phases. Below you are the
-`issue-flow:issue-phase` subagents, one per phase. You stand in the middle: you do not implement
+`crew:issue-phase` subagents, one per phase. You stand in the middle: you do not implement
 the phases, you assign them, verify them, tick and commit, and at the end you bring the child
 into the mother branch.
 
@@ -35,7 +35,7 @@ unticked phase, the MR/PR already open, the merge — instead of starting over.
 1. **The branch**: "The branch, from the mother" in step 4.2 of `big-implement`. The child is
    born from the updated mother branch, with the check of step **1 ter** of `implement` made
    against the mother branch.
-2. **The phases**: step 3 of `implement` with no variants. A **new** `issue-flow:issue-phase`
+2. **The phases**: step 3 of `implement` with no variants. A **new** `crew:issue-phase`
    subagent for every phase, with the full context of the issue; **you** run the verification
    and look at the real output; you tick the boxes re-reading the body from the server; one
    commit per phase with `(#<child>)` in the message. The phase subagent runs in the
@@ -49,7 +49,7 @@ unticked phase, the MR/PR already open, the merge — instead of starting over.
 
 ## What you do not do
 
-- **No goal mode.** Do not write or delete anything in `.git/issue-flow/` — neither `goal` nor
+- **No goal mode.** Do not write or delete anything in `.git/crew/` — neither `goal` nor
   `in-flight`: they belong to the main session, and touching them switches the project's goal
   off or on while it waits for you. The rules of `implement` about those files do not apply to
   you.
