@@ -1,6 +1,7 @@
 #!/bin/sh
 # End-to-end test of crew, in a throwaway HOME: the curl installer on a stale managed clone,
-# self-update at launch, an offline and a diverged clone, a development clone, `crew run`.
+# self-update at launch, an offline and a diverged clone, a development clone, `crew run`, and
+# the replacement of issue-flow@crew by crew@crew in the launcher and in the installer.
 # Run it from anywhere: sh tests/e2e.sh
 # Every assertion prints "ok <what>" or "FAIL <what>" and the run goes on; the exit status is
 # 1 when any FAIL was printed. Nothing outside the temp dir changes: HOME and PATH are
@@ -24,11 +25,18 @@ clone="$HOME/.local/share/crew"
 
 # --- stubs ---------------------------------------------------------------------------------
 
-# claude: one log line "<cwd> <args>"; the plugin list says crew@crew is installed
+# claude: one log line "<cwd> <args>"; the installed plugins are the ids in $t/plugins, one per
+# line: plugin list --json prints them, install, uninstall and marketplace remove change them
 cat >"$t/bin/claude" <<EOF
 #!/bin/sh
 printf '%s\n' "\$PWD \$*" >>"$t/claude.log"
-if [ "\$*" = "plugin list --json" ]; then echo '[{"id":"crew@crew"}]'; fi
+p="$t/plugins"
+case "\$*" in
+  'plugin list --json') printf '[%s]\n' "\$(sed 's/.*/{"id":"&"}/' "\$p" | paste -s -d, -)" ;;
+  'plugin install '*) printf '%s\n' "\$3" >>"\$p" ;;
+  'plugin uninstall '*) grep -vxF -- "\$3" "\$p" >"\$p.new"; cat "\$p.new" >"\$p" ;;
+  'plugin marketplace remove '*) grep -v -- "@\$4\\\$" "\$p" >"\$p.new"; cat "\$p.new" >"\$p" ;;
+esac
 exit 0
 EOF
 # term: used through TERMINAL, drops its -e and runs the rest (SHELL=/bin/true ends it at once)
@@ -55,6 +63,7 @@ cp "$t/bin/git" "$t/bin/term" "$t/bin-noclaude/"
 chmod +x "$t"/bin/* "$t"/bin-noclaude/*
 : >"$t/claude.log"
 : >"$t/git.log"
+printf '%s\n' crew@crew >"$t/plugins"
 
 # --- helpers -------------------------------------------------------------------------------
 
@@ -79,6 +88,17 @@ model_of() { tr -d '[:space:]' <"$HOME/.claude/crew/$1.model"; }
 loglines() { grep -c '' "$t/claude.log"; }
 sessions_after() { tail -n +"$(($1 + 1))" "$t/claude.log" | grep -c ' -n '; } # <lines already in the log>
 new_has() { tail -n +"$(($1 + 1))" "$t/claude.log" | grep -Fxq -- "$2"; }    # <lines already in the log> <exact line>
+new_count() { tail -n +"$(($1 + 1))" "$t/claude.log" | grep -c -e "$2"; }  # <lines already in the log> <regexp>: how many new lines match
+in_order() { # <lines already in the log> <regexp>...: the first new line matching each comes after the one before it
+  n=$1
+  shift
+  prev=0
+  for x in "$@"; do
+    k=$(tail -n +"$((n + 1))" "$t/claude.log" | awk -v p="$x" '$0 ~ p { print NR; exit }')
+    [ -n "$k" ] && [ "$k" -gt "$prev" ] || return 1
+    prev=$k
+  done
+}
 wait_sessions() { # <lines already in the log> <how many new sessions>: up to 15 s
   i=0
   while [ "$(sessions_after "$1")" -lt "$2" ] && [ "$i" -lt 15 ]; do
@@ -100,6 +120,8 @@ origin_commit() { # <message>: commit the work clone's tree on top of origin's m
 dump() { # the logs and outputs, for whoever reads a FAIL (lines start with #, never with ok/FAIL)
   echo "# claude.log:"
   sed 's/^/#   /' "$t/claude.log"
+  echo "# plugins:"
+  sed 's/^/#   /' "$t/plugins"
   for f in "$t"/*.out "$t"/*.err; do
     [ -s "$f" ] || continue
     echo "# ${f#"$t"/}:"
@@ -123,6 +145,8 @@ g -C "$t/origin.git" rev-parse -q --verify refs/heads/main >/dev/null ||
 g -C "$t/origin.git" symbolic-ref HEAD refs/heads/main || die "setup: origin HEAD"
 g -C "$t/origin.git" merge-base --is-ancestor 4341dd2 refs/heads/main ||
   die "setup: 4341dd2 is not in main's history (a shallow checkout? use fetch-depth: 0)"
+g -C "$t/origin.git" merge-base --is-ancestor 64f4e37 refs/heads/main ||
+  die "setup: 64f4e37 is not in main's history (a shallow checkout? use fetch-depth: 0)"
 g clone -q "$t/origin.git" "$t/work" || die "setup: work clone"
 # the tree of the commit is the tracked files of the working tree, committed or not
 g -C "$t/work" rm -rq . || die "setup: empty the work clone"
@@ -309,6 +333,70 @@ is "$rc" -ne 0
 check "D: 'crew run nope' exits non-zero" $?
 grep -qF "crew: no profile 'nope'" "$t/d3.err"
 check "D: 'crew run nope' says crew: no profile 'nope' on stderr" $?
+
+# =============================================================================================
+echo "== E: the rename reaches a 0.4.0 machine (clone at 64f4e37, issue-flow@crew installed)"
+# 64f4e37 is the last main commit before the rename: its bin/crew is the launcher every 0.4.0
+# machine runs. It pulls the rename, then execs the new launcher with CREW_NO_UPDATE=1, whose
+# migrate() does the replacement. The old launcher's own 'marketplace update' and 'plugin update
+# issue-flow@crew' are accepted by the stub and not counted.
+g -C "$clone" reset -q --hard 64f4e37 || die "setup: reset the managed clone to 64f4e37"
+g -C "$clone" config --unset crew.migrated || : # scenario B set it, and a launcher that never ran has not
+printf '%s\n' issue-flow@crew >"$t/plugins"
+want=$(g -C "$t/origin.git" rev-parse refs/heads/main)
+n0=$(loglines)
+crew "$t/proj" >"$t/e1.out" 2>"$t/e1.err"
+wait_sessions "$n0" 2
+
+is "$(g -C "$clone" rev-parse HEAD)" = "$want"
+check "E: the managed clone is at origin/main" $?
+is "$(new_count "$n0" ' plugin install crew@crew$')" -eq 1
+check "E: 'claude plugin install crew@crew' runs once" $?
+is "$(new_count "$n0" ' plugin uninstall issue-flow@crew$')" -eq 1
+check "E: 'claude plugin uninstall issue-flow@crew' runs once" $?
+in_order "$n0" ' plugin install crew@crew$' ' plugin uninstall issue-flow@crew$' ' -n '
+check "E: the install comes before the uninstall, both before the first session" $?
+is "$(cat "$t/plugins")" = crew@crew
+check "E: crew@crew is the only plugin left" $?
+grep -qF 'issue-flow@crew replaced by crew@crew' "$t/e1.out"
+check "E: the launcher says issue-flow@crew was replaced by crew@crew" $?
+is "$(sessions_after "$n0")" -eq 2
+check "E: both sessions start" $?
+
+n1=$(loglines)
+p1=$(grep -c ' plugin ' "$t/claude.log")
+crew "$t/proj" >"$t/e2.out" 2>"$t/e2.err"
+wait_sessions "$n1" 2
+is "$(grep -c ' plugin ' "$t/claude.log")" -eq "$p1"
+check "E: the second launch adds no plugin command" $?
+is ! -s "$t/e2.err"
+check "E: the second launch prints nothing on stderr" $?
+
+# =============================================================================================
+echo "== F: the curl installer on issue-flow@crew and upstream's issue-flow@issue-flow"
+# claude is on the PATH here. ponytail and caveman are installed, so on macOS (where detach does
+# nothing and /dev/tty opens) the menu takes its 'already installed' path and reads nothing.
+printf '%s\n' issue-flow@crew issue-flow@issue-flow ponytail@ponytail caveman@caveman >"$t/plugins"
+n0=$(loglines)
+( cd "$t" && detach sh <"$src/install.sh" ) >"$t/f1.out" 2>"$t/f1.err"
+check "F: the installer exits 0" $?
+is "$(new_count "$n0" ' plugin marketplace update crew$') $(new_count "$n0" ' plugin install crew@crew$') $(new_count "$n0" ' plugin uninstall issue-flow@crew$')" = '1 1 1' &&
+  in_order "$n0" ' plugin marketplace update crew$' ' plugin install crew@crew$' ' plugin uninstall issue-flow@crew$'
+check "F: marketplace update, install and uninstall issue-flow@crew each run once, in this order" $?
+is "$(new_count "$n0" ' plugin marketplace remove issue-flow$')" -eq 1
+check "F: 'claude plugin marketplace remove issue-flow' runs once" $?
+is "$(new_count "$n0" ' plugin marketplace add ')" -eq 0
+check "F: no 'claude plugin marketplace add' runs" $?
+is "$(sort "$t/plugins" | tr '\n' ' ')" = 'caveman@caveman crew@crew ponytail@ponytail '
+check "F: crew, ponytail and caveman are the plugins left" $?
+grep -qF 'issue-flow@crew replaced by crew@crew' "$t/f1.out" && grep -qF 'issue-flow@issue-flow replaced by crew@crew' "$t/f1.out"
+check "F: the installer says both plugins were replaced by crew@crew" $?
+
+printf '%s\n' crew@crew ponytail@ponytail caveman@caveman >"$t/plugins"
+n1=$(loglines)
+( cd "$t" && detach sh <"$src/install.sh" ) >"$t/f2.out" 2>"$t/f2.err"
+is "$(new_count "$n1" ' plugin ')" -eq "$(new_count "$n1" ' plugin list --json$')"
+check "F: a second installer run only lists the plugins" $?
 
 # =============================================================================================
 if [ "$nfail" -ne 0 ]; then dump; fi
