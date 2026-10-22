@@ -128,9 +128,10 @@ The two profiles that ship with it:
   reviews the result with `/crew:review`. It never pushes.
 - `ciurma` carries the issue out with `/crew:implement`, in its own worktree
   (`.claude/worktrees/ciurma`). It orchestrates and does not write the code
-  itself: every phase, and every round of review fixes, goes to a
-  `crew:issue-phase` subagent, which runs on sonnet whatever model the ciurma
-  runs on. It asks the sottoposto, never the user, and runs `/crew:close` only
+  itself: every phase, and every review fix, goes to a `crew:issue-phase`
+  subagent, which runs on sonnet whatever model the ciurma runs on. A review's
+  request to merge the base it does itself, since the subagent may not commit.
+  It asks the sottoposto, never the user, and runs `/crew:close` only
   when you ask for it through the sottoposto.
 
 The crew talks to itself in English.

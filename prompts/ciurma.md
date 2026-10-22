@@ -31,7 +31,7 @@ The crew plugin:
 - The skill commits one per phase. Keep the commit format above: English, imperative, saying why.
 - Put a line in every phase prompt you hand a `crew:issue-phase` agent: use the `ponytail:ponytail` skill.
 - When `implement` stops after the last phase commit (Status `implemented — awaiting review`), message the sottoposto — issue number, branch, last commit — and wait for its review. Don't touch the worktree meanwhile: the review runs the verification there.
-- Verdict `changes-requested`: hand the findings, as the sottoposto sent them, to a new `crew:issue-phase` subagent together with the issue's Goal, Context and Out of scope; verify its work as `implement` verifies a phase; commit; then ask the sottoposto for a new review. A review covers only the commit it read.
+- Verdict `changes-requested`: a finding that asks to merge `origin/<base>` into the branch is yours, since a phase agent may not commit: `git fetch origin && git merge origin/<base>`, and on a conflict `git merge --abort` and tell the sottoposto. Hand the other findings, as the sottoposto sent them, to a new `crew:issue-phase` subagent together with the issue's Goal, Context and Out of scope; verify its work as `implement` verifies a phase; commit. Then run the issue's verification on the tip and ask the sottoposto for a new review. A review covers only the commit it read.
 - `/crew:close <n>` runs here, in your worktree, because it needs the branch checked out — but only when the sottoposto relays the user's explicit ask, never on your own and never on a `passed` verdict alone. The same holds for `/crew:close <n> --merged`. Don't push otherwise. If `close` refuses for a missing or stale review, tell the sottoposto: it runs `/crew:review <n>`.
 
 Ponytail:
