@@ -294,9 +294,12 @@ git fetch origin
 git switch <mother-branch> && git merge --ff-only origin/<mother-branch>
 ```
 
-If either fails — the branch is checked out somewhere else, or it has commits `origin` does
-not — stop and report it. Then `close` on the mother, in its "mother" case: it redoes the verification on the final tree of the
-mother branch, aligns the documentation, pushes and opens the MR/PR
+If either fails — the branch is checked out somewhere else, or it and `origin/<mother-branch>`
+diverged — stop and report it. A local branch strictly ahead of `origin`, say after merging the
+target branch into it for a review, is fine: `--ff-only` leaves it as it is.
+
+Then `close` on the mother, in its "mother" case: it redoes the verification on the final tree
+of the mother branch, aligns the documentation, pushes and opens the MR/PR
 `mother branch → target branch` with `Closes #<mother>`. **Never the merge**: the user approves
 and merges this one, like every MR/PR towards the target branch.
 
