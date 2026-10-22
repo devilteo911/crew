@@ -101,8 +101,9 @@ that the development crosses is built.
   frontend, the caches, the clients already out there, backward compatibility;
 - **the measured numbers** that size the work: how many lines, how many callers, how many
   records, how many endpoints;
-- the host project as in `plan`: target branch, verification commands, documentation to keep
-  aligned. Derive them once here and pass them to all the writers.
+- the host project as in `plan`: target branch, verification commands and the setup command that
+  makes them runnable in a fresh clone, documentation to keep aligned. Derive them once here and
+  pass them to all the writers.
 
 ### 3. The decomposition
 
@@ -167,7 +168,8 @@ prompt, in full and not summarised:
 - the position of its child — `#(3)`, third of 5 — and **what it will find already done** when
   its turn comes: the types, the interfaces, the files that the children before it will have
   created, with the names decided;
-- the target branch, the verification commands and the documentation files derived at step 2;
+- the target branch, the verification commands, the setup command next to them and the
+  documentation files derived at step 2;
 - if `${user_config.figma_file}` is configured, the file id: the child that touches the frontend
   will have the Figma phase first;
 - the exact path of the file to write the body in: `$SCRATCH/child-<k>.md`.

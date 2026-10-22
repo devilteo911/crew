@@ -63,6 +63,10 @@ them from the project during reconnaissance and **write them in the issue**, so 
 phase has real commands and not a generic "run the tests": the `package.json` scripts, the
 `Makefile` targets, `pyproject.toml`/`tox.ini`, the CI jobs in `.gitlab-ci.yml` or
 `.github/workflows/`. The project's `CLAUDE.md`, if there is one, almost always lists them already.
+Together with them, derive from the same sources the **setup command** that makes them runnable in
+a fresh clone (`npm ci`, `uv sync`, `make deps`), or note that there is none: it goes in the
+issue's **Context**, because the phases may run in a git worktree that has none of the git-ignored
+files.
 
 **What must be kept aligned at the end.** `${user_config.docs_paths}` if configured, otherwise
 the documentation files the project actually has — `README.md`, `docs/`, a changelog — and

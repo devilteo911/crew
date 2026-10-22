@@ -221,7 +221,7 @@ else
 fi
 ```
 
-It is the rule of step 2 of `implement` with the mother branch in place of the target branch:
+It is the rule of step 2 of `implement`, the setup of a fresh worktree included, with the mother branch in place of the target branch:
 that is where the siblings already merged are. The check of step **1 ter** of `implement` is
 made against the mother branch: the dependencies are closed and their work is there
 (`git log --oneline origin/<mother-branch> | grep '#<k>'`), and the hook points "created in

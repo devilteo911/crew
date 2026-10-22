@@ -208,6 +208,14 @@ is `origin/<base>`:
 
 Never from the branch of a sibling that is not merged yet.
 
+**A fresh worktree needs its setup.** A linked worktree has only the tracked files, none of the
+git-ignored ones such as `node_modules`, `.venv` or build output. Before delegating the first
+phase, if this folder lacks what the verification commands need, run the project's setup command
+once: the one the issue's **Context** names, otherwise the one the project's README, `CLAUDE.md`
+or CI runs before its tests. In a folder already set up, skip it. If no source names one and a
+verification fails for a missing dependency, stop and ask: a guessed setup installs the wrong
+thing.
+
 ## 3. The loop, one phase at a time
 
 For each incomplete phase, in order. Four steps, always the same.
