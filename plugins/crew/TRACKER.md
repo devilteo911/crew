@@ -30,8 +30,8 @@ the CLI that would be needed is not installed (every command says so, and where 
 the second case, say so together with the remedy: `gh` is installed from
 <https://cli.github.com>, `glab` from <https://gitlab.com/gitlab-org/cli>, then `auth login`.
 
-If there are several remotes and `origin` is not the tracker's, the remote the user names
-applies: this is a case to ask about, not to deduce.
+`tracker.sh` reads only `origin`. If there are several remotes and `origin` is not the
+tracker's, stop and ask the user: no command can be pointed at another remote.
 
 ## 2. The tracker answers — step 0 of every skill
 
