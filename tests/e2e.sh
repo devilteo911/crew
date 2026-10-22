@@ -496,6 +496,14 @@ check "G: in an empty repo, exactly one line on stderr" $?
 head -n 1 "$t/g8.err" | grep -q '^crew:'
 check "G: that line is a crew: warning" $?
 
+# an exclude file whose last line has no newline: the worktree's line goes on a line of its own
+g clone -q "$t/origin.git" "$t/wnl" || die "setup: project clone for the exclude file"
+printf '*.log' >"$t/wnl/.git/info/exclude"
+wrun "$t/wnl" worker >"$t/g10.out" 2>"$t/g10.err"
+is "$(cat "$t/wnl/.git/info/exclude")" = "$(printf '%s\n' '*.log' /.claude/worktrees/)" && : >"$t/wnl/a.log" &&
+  is -z "$(g -C "$t/wnl" status --porcelain)"
+check "G: an exclude file without a final newline keeps its last pattern and gets the worktree's" $?
+
 # offline first launch: the same hanging fetch as in C, bounded by crew's watchdog
 g clone -q "$t/origin.git" "$t/woff" || die "setup: offline project clone"
 g -C "$t/woff" remote set-url origin ssh://crew.invalid/crew.git || die "setup: point the remote at a dead host"

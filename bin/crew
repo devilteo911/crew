@@ -90,9 +90,11 @@ into_worktree() { # <name>
     [ -n "$top" ] || return 1
   wt="$top/.claude/worktrees/$1"
   if [ ! -e "$wt" ]; then
-    # the main checkout's git status must not list the worktree
-    grep -qxF /.claude/worktrees/ "$common/info/exclude" 2>/dev/null ||
-      { mkdir -p "$common/info" && echo /.claude/worktrees/ >>"$common/info/exclude"; } || return 1
+    # the main checkout's git status must not list the worktree; a last line without its newline keeps its own
+    x="$common/info/exclude"
+    grep -qxF /.claude/worktrees/ "$x" 2>/dev/null ||
+      { mkdir -p "$common/info" && { [ ! -s "$x" ] || [ -z "$(tail -c 1 "$x")" ] || echo >>"$x"; } &&
+        echo /.claude/worktrees/ >>"$x"; } || return 1
     fetch5 . || :   # offline: the origin/HEAD already here will do, the skills fetch before branching
     ref=origin/HEAD
     git rev-parse -q --verify "$ref^{commit}" >/dev/null || ref=HEAD
