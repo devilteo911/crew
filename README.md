@@ -25,6 +25,16 @@ after the plugin's update to 3.0.0 also replaces `issue-flow@crew` with
 issue-flow` warning, from the launcher being replaced. A clone older than 0.4.0
 has no self-update: run the curl command once more.
 
+Upgrading to 0.5.0, where the ciurma starts in its own worktree: a ciurma
+branch left checked out in the shared tree can be resumed in the worktree only
+once the main checkout is back on the target branch (`git switch <target
+branch>` there), because git checks a branch out in one place only.
+
+A `prompts/ciurma.worktree` created by hand in the managed clone
+(`~/.local/share/crew`) has to be deleted: 0.5.0 ships that file, and while
+the copy is there the self-update fails at every launch with git's
+"untracked working tree files would be overwritten by merge".
+
 The two symlinks:
 
 - `~/.local/bin/crew` → `bin/crew` (must be on the PATH)
@@ -79,8 +89,11 @@ contents are appended to the system prompt (`--append-system-prompt-file`).
 Adding a member means adding a `.md`: nothing to touch in the script.
 
 An optional `prompts/<name>.model` sets that session's model (`claude --model`):
-`sottoposto` runs on `opus`, `ciurma` on `sonnet`. No file, or an empty one,
-means Claude's default. `crew run` reads `<name>.md`, `<name>.model` and
+`sottoposto` runs on `opus`, `ciurma` on `sonnet`. The ciurma's model drives
+only the orchestration: the phases run on sonnet because
+`plugins/crew/agents/issue-phase.md` sets `model: sonnet`, and only
+`CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1` with `CLAUDE_CODE_SUBAGENT_MODEL` overrides
+that. No file, or an empty one, means Claude's default. `crew run` reads `<name>.md`, `<name>.model` and
 `<name>.worktree` at every start, so terminals and the keybinding pick up a
 change at the next launch.
 
@@ -101,26 +114,46 @@ setup there. A branch lives in one checkout at a time, so to resume in the
 worktree a branch the main checkout has checked out, switch the main checkout
 back to the target branch first. To remove the worktree, run
 `git worktree remove .claude/worktrees/<name>` from the main checkout, with
-`--force` to drop uncommitted changes; the next launch creates a fresh one. No
-shipped profile has the file yet. To try it, point `CREW_DIR` at a copy of
-`prompts/` with the file added: an untracked file in the managed clone's
-`prompts/` makes its self-update fail once a later version ships the same path.
+`--force` to drop uncommitted changes; the next launch creates a fresh one.
+`ciurma` ships with one (`prompts/ciurma.worktree`): in a git project it starts
+in `.claude/worktrees/ciurma`, while `sottoposto` keeps the main checkout.
 
 `CREW_DIR` overrides the profiles directory, if you need to try another one.
 
-The two profiles that ship with it: `sottoposto` leads and reviews, `ciurma`
-writes the code. The crew talks to itself in English; the sottoposto answers
-the user in the user's own language.
+The two profiles that ship with it:
 
-The profiles expect [the crew plugin](plugins/crew/): the sottoposto plans the
-issue, the ciurma implements it, the sottoposto reviews, and the user decides
-when to open the PR. It needs a
-GitHub or GitLab remote with `gh`/`glab` authenticated. The plugin ships in
-this repo (`plugins/crew/`, marketplace `crew`, registered from the
-clone). If it is missing the sottoposto asks, installs it with `claude plugin`
-and asks for a restart; the ciurma does the same for ponytail and caveman. If
-the user declines, or the repo has no such tracker, it falls back to a plain
-plan session.
+- `sottoposto` is the user's one contact, and answers in the user's language.
+  It plans each change into an issue (`/crew:plan`, or `/crew:big-plan` when it
+  doesn't fit one), answers the ciurma's questions by fixing the issue, and
+  reviews the result with `/crew:review`. It never pushes.
+- `ciurma` carries the issue out with `/crew:implement`, in its own worktree
+  (`.claude/worktrees/ciurma`). It orchestrates and does not write the code
+  itself: every phase, and every round of review fixes, goes to a
+  `crew:issue-phase` subagent, which runs on sonnet whatever model the ciurma
+  runs on. It asks the sottoposto, never the user, and runs `/crew:close` only
+  when you ask for it through the sottoposto.
+
+The crew talks to itself in English.
+
+The profiles expect [the crew plugin](plugins/crew/). It needs a GitHub or
+GitLab remote with `gh`/`glab` authenticated. The plugin ships in this repo
+(`plugins/crew/`, marketplace `crew`, registered from the clone). The round:
+
+```
+sottoposto  /crew:plan            →  issue #12
+ciurma      /crew:implement 12    →  branch issue-12 in its worktree, one commit per phase
+sottoposto  /crew:review 12       →  reviewed, or changes requested back to the ciurma
+ciurma      /crew:close 12        →  only when you ask, through the sottoposto: opens the pull request
+```
+
+`/crew:close` runs in the ciurma's worktree, which has the branch checked
+out. It opens a pull request towards the target branch only when
+`review-gate.sh` finds a passed review of the branch's last commit, so a
+commit after the review needs a new one. The installer is the one place
+that installs the plugins: a session that finds one missing says so once,
+and the sottoposto can still install crew itself on your yes. Without such
+a tracker, or if you decline crew, the sottoposto falls back to a plain plan
+session.
 
 ## The crew plugin
 
