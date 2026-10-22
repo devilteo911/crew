@@ -126,9 +126,11 @@ claude plugin marketplace remove issue-flow   # only if upstream's issue-flow@is
 ```
 
 then restart the crew sessions: the commands are now `/crew:*`. A
-curl-installed clone does all this by itself at its next launch; a development
-clone pulls, then runs `./install.sh` or the commands above. Issues still
-written with the 1.x markers are no longer read: finish them before updating.
+curl-installed clone replaces `issue-flow@crew` by itself at its next launch;
+upstream's `issue-flow@issue-flow` goes only with `./install.sh` or the second
+command. A development clone pulls, then runs `./install.sh` or the commands
+above. Issues still written with the 1.x markers are no longer read: finish
+them before updating.
 Options set with `/plugin configure` on `issue-flow@crew` do not move:
 `claude plugin configure issue-flow@crew` shows them before the update, and
 they are set again on `crew@crew`.
