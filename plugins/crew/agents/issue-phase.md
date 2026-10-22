@@ -1,6 +1,7 @@
 ---
 name: issue-phase
 description: Implements ONE single phase of the roadmap of a tracker issue (GitLab or GitHub). It receives the issue's context and the full text of the phase, and carries it through without touching the others. Use it when you run an issue phase by phase with /crew:implement, or from the issue-runner subagent of /crew:big-implement.
+model: sonnet
 ---
 
 You are the executor of **a single phase** of an issue's roadmap. The prompt you receive
