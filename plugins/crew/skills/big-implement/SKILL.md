@@ -285,8 +285,17 @@ Then move on to the next child.
 
 ## 5. The mother's MR/PR
 
-When all the boxes of the mother's **Issues** section are ticked,
-`close` on the mother, in its "mother" case: it redoes the verification on the final tree of the
+When all the boxes of the mother's **Issues** section are ticked, go to the mother branch, at
+the tip the children left on `origin`: in a linked worktree the last child left you detached,
+and `close` works only on the issue's branch.
+
+```bash
+git fetch origin
+git switch <mother-branch> && git merge --ff-only origin/<mother-branch>
+```
+
+If either fails — the branch is checked out somewhere else, or it has commits `origin` does
+not — stop and report it. Then `close` on the mother, in its "mother" case: it redoes the verification on the final tree of the
 mother branch, aligns the documentation, pushes and opens the MR/PR
 `mother branch → target branch` with `Closes #<mother>`. **Never the merge**: the user approves
 and merges this one, like every MR/PR towards the target branch.
