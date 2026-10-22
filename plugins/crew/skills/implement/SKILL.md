@@ -67,37 +67,34 @@ you stop before step 2, the file does not exist yet and there is nothing to dele
 
 ## 0. Which tracker, and does it answer
 
-The tracker is GitLab (`glab`) or GitHub (`gh`) depending on the remote: `git remote get-url origin`.
-The full command mapping is in `${CLAUDE_PLUGIN_ROOT}/TRACKER.md` — the file `TRACKER.md` in
-this plugin's folder — to be read before the first command, because the body field changes
-name between the two platforms and getting it wrong empties the issue.
+The tracker is GitLab or GitHub depending on the remote, and `scripts/tracker.sh` is the only
+way to it: it deduces which from `origin`, calls `glab` or `gh` itself, and refuses the calls that
+would damage an issue. You never call the two CLIs yourself. `${CLAUDE_PLUGIN_ROOT}/TRACKER.md` —
+the file `TRACKER.md` in this plugin's folder — holds the vocabulary of the two platforms and
+their traps, and is to be read before the first command. Below, `tracker.sh` stands for
+`"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh"`, and the blocks write it in full.
 
 ```bash
-glab auth status && glab issue view <number>          # GitLab
-gh   auth status && gh   issue view <number>          # GitHub
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" check
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" view <number>
 ```
 
-It must show the issue, not a 404. If it gives 404 or "could not determine base repo", the
-remote is an SSH alias and the remedy is in `TRACKER.md` §2. If you are not authenticated,
-stop and ask the user to run `glab auth login --hostname gitlab.com` or
-`gh auth login --hostname github.com`: it is interactive, you cannot do it yourself.
+`check` exits 0 when the CLI is installed, authenticated and resolves the repo, and `view` must
+show the issue. When either fails, what it printed is the remedy: the CLI is not installed, or the
+remote is an SSH alias (`TRACKER.md` §2), or you are not authenticated. The remedies are
+interactive or by hand: stop and ask the user to run the one that was printed, you cannot do it
+yourself.
 
 ## 1. Read the issue, all of it, from the server
 
 ```bash
-# GitLab
-glab issue view <number> --output json > "$SCRATCH/issue.json"
-jq -r '.title'       "$SCRATCH/issue.json"
-jq -r '.description' "$SCRATCH/issue.json" > "$SCRATCH/roadmap.md"
-
-# GitHub
-gh issue view <number> --json title,body > "$SCRATCH/issue.json"
-jq -r '.title' "$SCRATCH/issue.json"
-jq -r '.body'  "$SCRATCH/issue.json" | sed 's/\r$//' > "$SCRATCH/roadmap.md"
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" view <number> | jq -r .title
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body get <number> "$SCRATCH/roadmap.md"
 ```
 
-Check that `roadmap.md` is not empty before going on: if it is, you picked the other
-platform's field.
+`body get` writes the whole body, without CR, to `roadmap.md`, and refuses an issue whose body is
+empty. Next to the file it leaves `roadmap.md.stamp`, the issue's updated timestamp: it is what
+`body put` compares against when you rewrite the body, so it stays where it is.
 
 If the top of the body has `**Type:** roadmap`, it is the mother of a
 `/crew:big-plan` and it is not implemented: go to step 1 bis. If it has
@@ -126,9 +123,8 @@ grep -n '^[[:space:]]*- \[ \] #[0-9]' "$SCRATCH/roadmap.md" | head -1
 ```
 
 Before taking it, check that the children it depends on — the `· depends on #<k>` line in the
-mother, `**Depends on:**` in the child — are **closed** on the tracker
-(`glab issue view <k> --output json --jq '.state'` → `closed`, `gh issue view <k> --json state
---jq '.state'` → `CLOSED`). A child with a dependency still open is not started: tell the user
+mother, `**Depends on:**` in the child — are **closed** on the tracker: `tracker.sh state <k>`
+prints `closed`. A child with a dependency still open is not started: tell the user
 and say which one has to be closed first — usually an MR/PR waiting to be merged.
 
 If all the mother's boxes are ticked, the project is finished: say so, and if the mother is
@@ -243,24 +239,27 @@ As soon as verification passes, and not when the work is done. It is the step th
 issue readable to whoever resumes after a `/clear`: without it, the roadmap lies.
 
 ```bash
-# GitLab
-glab issue view <number> --output json --jq '.description' > "$SCRATCH/roadmap.md"
-
-# GitHub
-gh issue view <number> --json body --jq '.body' > "$SCRATCH/roadmap.md"
-sed -i 's/\r$//' "$SCRATCH/roadmap.md"
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body get <number> "$SCRATCH/roadmap.md"
 
 # turn into `- [x]` ONLY the checkboxes of the phase just closed
 # bring the "**Status:**" line to `in progress — phase N of M`
 
-glab issue update <number> --description-file "$SCRATCH/roadmap.md"   # GitLab
-gh   issue edit   <number> --body-file        "$SCRATCH/roadmap.md"   # GitHub
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body put <number> "$SCRATCH/roadmap.md"
 ```
 
-**Always re-read the body from the server before rewriting it**, never from a copy kept in the
-conversation: the update replaces the whole field and does not merge, so an old version erases
-what the user ticked from the page while you were working. And check that the file is not
-empty before sending it back up.
+**Always `body get` right before the edit**, never from a copy kept in the conversation: `body put`
+replaces the whole body and does not merge, so an old version erases what the user ticked from
+the page while you were working. That is why it checks, and says which check failed:
+
+- an empty file: the edit lost the body. Redo the edit from a fresh `body get`;
+- an issue that changed since `body get`: someone ticked a box, or something else wrote to the
+  issue. Run `body get` again, redo the tick on the body that came back, and `body put` again.
+  **Never delete `roadmap.md.stamp` to force it**;
+- a file under half the size of the body: a tick and a status line never cut that much, so
+  something did. Find out what, and pass `--shrink` only if the cut is meant.
+
+Any write on the issue moves its timestamp, so if you close it or comment on it, `body get`
+comes after that and not before.
 
 If a decision changed during the implementation, **rewrite the line** instead of ticking it:
 the roadmap must say what was really done. If the subagent could not complete a checkbox, it
@@ -289,7 +288,7 @@ are left with a ready branch and nobody to take it to its destination.
 
 Bring the issue's **Status:** line to `implemented — awaiting merge request` (on GitHub:
 `awaiting pull request`), so that whoever reopens the page knows where things stand without
-looking at the git log.
+looking at the git log. It is the same `body get`, edit and `body put` as the ticks.
 
 ## 5. Delivery
 

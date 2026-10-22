@@ -13,8 +13,9 @@ tracker is GitHub — with a body that says what changes and how it was verified
 word, not the slash.
 
 **Towards the target branch the MR/PR is opened and not merged.** The merge is requested by
-the user, always: towards `${user_config.default_branch}` this skill never runs `glab mr merge`
-or `gh pr merge`, not even if the pipelines are green.
+the user, always: towards `${user_config.default_branch}` this skill never runs
+`tracker.sh mr merge`, not even if the pipelines are green — and `tracker.sh` refuses it too,
+whatever it is asked.
 
 The one exception is the child of a project that has a **mother branch** — the one that
 `/crew:big-implement` opens: its MR/PR points to the mother branch, which is the
@@ -34,24 +35,25 @@ that one.
 
 ## 0. Which tracker, and does it answer
 
-GitLab (`glab`) or GitHub (`gh`) according to `git remote get-url origin`; the command mapping
-is in `${CLAUDE_PLUGIN_ROOT}/TRACKER.md` — the `TRACKER.md` file in this plugin's folder — to
-be read before the first command.
+As in step 0 of `implement`. `scripts/tracker.sh` is the only way to the tracker — GitLab or
+GitHub, it deduces which from `origin` — and `${CLAUDE_PLUGIN_ROOT}/TRACKER.md` — the
+`TRACKER.md` file in this plugin's folder — holds the vocabulary of the two platforms and their
+traps, to be read before the first command. Below, `tracker.sh` stands for
+`"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh"`, and the blocks write it in full.
 
 ```bash
-glab auth status && glab issue view <number>          # GitLab
-gh   auth status && gh   issue view <number>          # GitHub
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" check
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" view <number>
 ```
 
-On a 404, or on "could not determine base repo", the remedy of `TRACKER.md` §2 applies: the
-remote is an SSH alias that the CLI does not recognise. If you are not authenticated, stop and
-ask the user to run `glab auth login --hostname gitlab.com` or `gh auth login --hostname github.com`:
-it is interactive.
+When either fails, what it printed is the remedy: the CLI is not installed, or the remote is an
+SSH alias that the CLI does not recognise (`TRACKER.md` §2), or you are not authenticated. The
+remedies are interactive or by hand: stop and ask the user to run the one that was printed.
 
 ## 0 bis. Which case
 
-Re-read the issue from the server and look at the top of the body. The case decides the
-**base** — the branch the MR/PR points to — and who merges it:
+Re-read the issue from the server (`tracker.sh view <number> | jq -r .body`) and look at the top
+of the body. The case decides the **base** — the branch the MR/PR points to — and who merges it:
 
 | case | how you recognise it | base | merge |
 |---|---|---|---|
@@ -84,12 +86,7 @@ body is the only one that holds on both platforms — `task_completion_status` e
 GitLab:
 
 ```bash
-# GitLab
-glab issue view <number> --output json --jq '.description' > "$SCRATCH/roadmap.md"
-
-# GitHub
-gh issue view <number> --json body --jq '.body' > "$SCRATCH/roadmap.md"
-sed -i 's/\r$//' "$SCRATCH/roadmap.md"
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body get <number> "$SCRATCH/roadmap.md"
 
 grep -c '^[[:space:]]*- \[[ xX]\]' "$SCRATCH/roadmap.md"   # total
 grep -c '^[[:space:]]*- \[[xX]\]'  "$SCRATCH/roadmap.md"   # ticked
@@ -98,9 +95,9 @@ grep -n  '^[[:space:]]*- \[ \]'    "$SCRATCH/roadmap.md"   # the ones left
 
 For the **mother** the boxes are those of the **Issues** section (`## Issues`), one per
 child, and they count like the others: all ticked means all the children merged into the
-mother branch. Also check that every child is closed on the tracker; a box
-ticked on an open child, or the opposite, is a mother that fell behind and has to be fixed
-first.
+mother branch. Also check that every child is closed on the tracker (`tracker.sh state <child>`
+prints `closed`); a box ticked on an open child, or the opposite, is a mother that fell behind
+and has to be fixed first.
 
 If empty boxes remain, list them for the user and ask: either work is missing — and then you go
 back to `/crew:implement <number>` — or they have been dropped and the line has to be
@@ -151,27 +148,13 @@ update it and commit before going on.
 ```bash
 git push -u origin <branch>
 
-# GitLab
-glab mr create \
-  --related-issue <number> \
-  --source-branch <branch> \
-  --target-branch <base> \
-  --title "<the same title as the issue>" \
-  --description-file "$SCRATCH/mr.md" \
-  --remove-source-branch \
-  --yes
-
-# GitHub — no `--related-issue` or `--remove-source-branch`: the link comes from the
-# `Closes #<number>` at the top of the body, and the branch is deleted after the merge
-gh pr create \
-  --head <branch> \
-  --base <base> \
-  --title "<the same title as the issue>" \
-  --body-file "$SCRATCH/mr.md"
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" mr create <number> <branch> <base> "<the same title as the issue>" "$SCRATCH/mr.md"
 ```
 
-The MR/PR number is the one the command prints in the URL: read it from there. On GitHub it
-will not be the issue's — issues and pull requests share the same number sequence.
+`mr create` prints the MR/PR number: read it from there. On GitHub it will not be the issue's —
+issues and pull requests share the same number sequence. The link to the issue is the
+`Closes #<number>` that opens the body below: on GitHub `mr create` adds it when the body lacks
+it, on GitLab it also links the issue itself (`TRACKER.md` §5).
 
 For the **child on the mother branch**, `<base>` is the mother branch: on both platforms the
 `Closes #<number>` acts only on the default branch, so you close the child yourself at step
@@ -207,27 +190,27 @@ was verified", one more section:
 ```
 
 with the MR/PRs through which each child entered the mother branch
-(`glab mr list --target-branch <mother-branch> --merged`, `gh pr list --base <mother-branch>
---state merged`). "Deviations from the plan" gathers those of the children.
+(`tracker.sh mr list --base <mother-branch> --merged`). "Deviations from the plan" gathers those
+of the children.
 
 The numbers in here are those you **read** at step 1, not those you expected: an MR/PR that
 declares green tests never run is the fastest way to let an error through.
 
 Then bring the issue's **Status:** line to `in review — !<MR number>` on GitLab, or
-`in review — #<PR number>` on GitHub, always re-reading the body from the server before
-rewriting it, because the update replaces the whole field and does not merge:
+`in review — #<PR number>` on GitHub. Take the body with `body get` **after** the MR/PR is open,
+because opening it may write to the issue (on GitLab it links it) and `body put` refuses a body
+read before any write. It replaces the whole body and does not merge:
 
 ```bash
-# GitLab
-glab issue view <number> --output json --jq '.description' > "$SCRATCH/roadmap.md"
-# GitHub
-gh issue view <number> --json body --jq '.body' > "$SCRATCH/roadmap.md" && sed -i 's/\r$//' "$SCRATCH/roadmap.md"
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body get <number> "$SCRATCH/roadmap.md"
 
 # you touch only the status line: `**Status:**`
 
-glab issue update <number> --description-file "$SCRATCH/roadmap.md"   # GitLab
-gh   issue edit   <number> --body-file        "$SCRATCH/roadmap.md"   # GitHub
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body put <number> "$SCRATCH/roadmap.md"
 ```
+
+If `body put` refuses because the issue changed, run `body get` again and redo the change;
+`implement` lists the other refusals. Never delete the `.stamp` to force it.
 
 For the **child on the mother branch** you do not stop here: go on with step 3 bis. In the
 other cases the skill ends with the MR/PR open, and goes on when the user comes back with
@@ -241,32 +224,23 @@ whoever reviews would have made you did at steps 1 and 2.
 **The pipelines, if any.** Wait for them to finish and look at the outcome:
 
 ```bash
-# GitLab — `null` if the project has no pipeline on the MR
-glab mr view <mr> --output json --jq '.head_pipeline.status'   # repeat until it is success/failed
-
-# GitHub — "no checks reported" means no checks, and that is green
-gh pr checks <pr> --watch --fail-fast
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" mr checks <mr>
 ```
 
-A red pipeline is a "When to really stop" case, like a red verification at step 1.
+It waits, then prints `success` or `none` — no pipeline, which is green — and exits 0, or prints
+the failure and exits 1. A red pipeline is a "When to really stop" case, like a red
+verification at step 1.
 
 **The merge**, tied to the commit you verified, so nothing you have not seen gets merged:
 
 ```bash
-SHA=$(git rev-parse HEAD)
-
-# GitLab — without `--auto-merge=false` glab defers the merge to the end of the pipeline, and
-# the next child would be born from a mother branch that still lacks this one
-glab mr merge <mr> --sha "$SHA" --auto-merge=false --remove-source-branch --yes
-
-# GitHub — `--merge` keeps the phases' commits, with their `(#<number>)`, in the history of
-# the mother branch
-gh pr merge <pr> --merge --match-head-commit "$SHA" --delete-branch
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" mr merge <mr> "$(git rev-parse HEAD)"
 ```
 
-Then re-read the state: it must be `merged`/`MERGED` **now**. If the server queued it or put it
-in auto-merge, or refused it — conflicts, required approvals, protected branch — stop and report
-what it says.
+`mr merge` merges only that commit, refuses the repo's default branch, and re-reads the state:
+it exits 1 unless the MR/PR is `merged` **now**. If the server queued it or put it in
+auto-merge, or refused it — conflicts, required approvals, protected branch — stop and report
+what it says. Why it merges the way it does is in `TRACKER.md` §5.
 
 **The closing**, without waiting for `--merged`: all of step 4 — the issue closed, the child's
 **Status:** to `closed — merged into <mother-branch> on DD/MM/YYYY`, the working branch deleted
@@ -283,23 +257,23 @@ Only when the user says the MR/PR has been merged — or, for the child on the m
 from step 3 bis as soon as the merge is confirmed. You check that it is true, then close:
 
 ```bash
-# GitLab — the state is lowercase
-glab mr view <number-or-branch> --output json --jq '.state'    # must say "merged"
-glab issue close <number>
-
-# GitHub — the state is uppercase, and the issue may already be closed by the `Closes #<number>`
-gh pr view <number-or-branch> --json state --jq '.state'       # must say "MERGED"
-gh issue view <number> --json state --jq '.state'              # if it is already "CLOSED", do not close it again
-gh issue close <number>
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" mr state <number-or-branch>    # must say "merged"
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" close <number>
 ```
 
-and bring the **Status:** line to `closed — merged on DD/MM/YYYY`, with today's date — for the
-mother, `closed — completed on DD/MM/YYYY`. Locally: `git switch <base> && git pull --ff-only`.
-The working branch is deleted only if the server has not already done it: on GitLab
-`--remove-source-branch` does it, on GitHub the repo's "Automatically delete head branches"
-option, and if neither has removed it, `git push origin --delete <branch>`.
+`close` prints `closed`, or `already closed` when the issue was closed before — on GitHub the
+`Closes #<number>` of a merged PR does it by itself — and then it did not write anything: that
+is what you tell the user, not that you closed it.
 
-If the state of the MR/PR is not `merged`/`MERGED`, close nothing and say so.
+Then bring the **Status:** line to `closed — merged on DD/MM/YYYY`, with today's date — for the
+mother, `closed — completed on DD/MM/YYYY` — with the `body get` **after** the close, because the
+close moved the issue's timestamp, then the edit and `body put`. Locally: `git switch <base> &&
+git pull --ff-only`. The working branch is deleted only if the server has not already done it —
+`mr merge` deletes it for the child on the mother branch, GitLab does it for an MR opened by
+`mr create`, GitHub does it when the repo's "Automatically delete head branches" option is on —,
+and if none has removed it, `git push origin --delete <branch>`.
+
+If the state of the MR/PR is not `merged`, close nothing and say so.
 
 ### The mother, if the issue is a child
 
@@ -307,21 +281,18 @@ If the top of the issue body has `**Roadmap:** #<mother>`, the child just closed
 ticked on the mother: it is the only place where you can read how far the project is.
 
 ```bash
-# GitLab
-glab issue view <mother> --output json --jq '.description' > "$SCRATCH/mother.md"
-# GitHub
-gh issue view <mother> --json body --jq '.body' > "$SCRATCH/mother.md" && sed -i 's/\r$//' "$SCRATCH/mother.md"
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body get <mother> "$SCRATCH/mother.md"
 
 # turn into `- [x]` ONLY the `- [ ] #<number>` line of the Issues section (`## Issues`)
 # bring the mother's status line to `in progress — k of M issues merged`
 
-glab issue update <mother> --description-file "$SCRATCH/mother.md"   # GitLab
-gh   issue edit   <mother> --body-file        "$SCRATCH/mother.md"   # GitHub
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body put <mother> "$SCRATCH/mother.md"
 ```
 
-The usual rules: re-read from the server, check that the file is not empty, touch only those
-two lines. The child's MR/PR carries `Closes #<child>` and **never** the mother's number: the
-mother is not closed at the merge of a child.
+The usual rules: `body get` right before the edit, touch only those two lines, and when `body put`
+refuses — the mother changed since the `body get` — read it again and redo the two lines. The
+child's MR/PR carries `Closes #<child>` and **never** the mother's number: the mother is not
+closed at the merge of a child.
 
 For the **child on the mother branch** the mother's **Status:** becomes
 `in progress — k of M issues merged into <mother-branch>`, and the mother is **not closed**
@@ -330,18 +301,18 @@ branch. In the delivery name the next child — or, if they were all done, the n
 `/crew:close <mother>`, which opens the mother's MR/PR.
 
 For the **child** merged directly into the target branch, if after the tick all the boxes of the
-Issues section are `- [x]`, the project is finished: bring the mother's **Status:** to
-`closed — completed on DD/MM/YYYY` and close it (`glab issue close <mother>`,
-`gh issue close <mother>`). Otherwise, in the delivery, name the next child: the first
-`- [ ] #<n>` left, to start with `/crew:implement <n>` — or
+Issues section are `- [x]`, the project is finished: close it (`tracker.sh close <mother>`),
+then `body get` it again — the close moved its timestamp — and bring the mother's **Status:** to
+`closed — completed on DD/MM/YYYY` with a `body put`. Otherwise, in the delivery, name the next
+child: the first `- [ ] #<n>` left, to start with `/crew:implement <n>` — or
 `/crew:implement <mother>`, which finds it on its own.
 
 ### The mother
 
 `--merged` on the **mother**, with the mother's MR/PR merged: step 4 as it stands, with the
 mother branch as the working branch. The children are already closed and ticked; what is left
-is to close the mother, if the `Closes #<mother>` has not already done it, and to delete the
-mother branch.
+is to close the mother (`tracker.sh close <mother>`, which says `already closed` if the
+`Closes #<mother>` got there first) and to delete the mother branch.
 
 ## 5. Delivery
 
@@ -355,6 +326,7 @@ child comes next. If you stopped, the reason in one line and what is needed to u
 Stop and ask, instead of opening the MR/PR, if: there are unticked checkboxes left; the working
 tree is dirty; a verification is red and the cause is not an obvious typo; the branch is behind
 the base in a way that merging it brings conflicts to decide; the issue is already closed or
-already has an open MR/PR — except, for the child on the mother branch, an MR/PR left open by an
-interrupted run, which is resumed from step 3 bis; a pipeline is red, or the server does not
-merge the child's MR/PR into the mother branch.
+already has an open MR/PR (a `tracker.sh mr list --head <branch>` that is not empty) — except,
+for the child on the mother branch, an MR/PR left open by an interrupted run, which is resumed
+from step 3 bis; a pipeline is red, or the server does not merge the child's MR/PR into the
+mother branch.
