@@ -14,8 +14,9 @@ word, not the slash.
 
 **Towards the target branch the MR/PR is opened and not merged.** The merge is requested by
 the user, always: towards `${user_config.default_branch}` this skill never runs
-`tracker.sh mr merge`, not even if the pipelines are green — and `tracker.sh` refuses it too,
-whatever it is asked.
+`tracker.sh mr merge`, not even if the pipelines are green. `tracker.sh` itself refuses a merge
+into the repo's default branch, whatever it is asked; a configured target branch that is not the
+repo's default is guarded only by this rule.
 
 The one exception is the child of a project that has a **mother branch** — the one that
 `/crew:big-implement` opens: its MR/PR points to the mother branch, which is the
