@@ -1,6 +1,6 @@
 ---
 name: big-implement
-description: "Runs, in a single execution, all the child issues of a /crew:big-plan mother issue — GitLab or GitHub — on the mother branch: one child at a time, in the mother's order, each handed to an issue-runner subagent that does the round of /crew:implement (one subagent per phase, checkboxes ticked, one commit per phase) and the one of /crew:close, which verifies, opens the merge request — pull request on GitHub — towards the mother branch and merges it by itself. At the end it opens the mother's MR/PR towards the target branch, which only the user merges. Trigger: /crew:big-implement, 'implement the whole project N', 'run the whole roadmap N', 'run all the children of N'."
+description: "Runs, in a single execution, all the child issues of a /crew:big-plan mother issue — GitLab or GitHub — on the mother branch: one child at a time, in the mother's order, each handed to an issue-runner subagent that does the round of /crew:implement (one subagent per phase, checkboxes ticked, one commit per phase) and the one of /crew:close, which verifies, opens the merge request — pull request on GitHub — towards the mother branch and merges it by itself. At the end it asks for /crew:review of the mother branch; once that has passed, it opens the mother's MR/PR towards the target branch, which only the user merges. Trigger: /crew:big-implement, 'implement the whole project N', 'run the whole roadmap N', 'run all the children of N'."
 argument-hint: "<mother>"
 hooks:
   Stop:
@@ -28,9 +28,11 @@ main ─────────────────────────
 - each child is born from the updated mother branch, is implemented, and then goes through `close`:
   verification on the final tree, documentation, MR/PR **towards the mother branch** — which
   here `close` **merges by itself**, because the mother branch is not the product: it is the
-  project's building site, and the real review comes at the end;
-- when the last child is merged, the mother's MR/PR towards the target branch is opened as
-  usual and **is not merged**: the user approves and merges that one.
+  project's building site, and the real review comes at the end: `/crew:review <mother>`, on
+  the mother branch against the target branch;
+- when the last child is merged, the mother branch is reviewed, and only after that review has
+  passed is the mother's MR/PR towards the target branch opened as usual. It **is not merged**:
+  the user approves and merges that one.
 
 The execution rules are those of `implement` and `close` and are not repeated here:
 `${CLAUDE_PLUGIN_ROOT}/skills/implement/SKILL.md` for the phases, the verification, the ticks, the
@@ -110,10 +112,11 @@ issue-20  mother branch, born from main
 #21  issue-21  born from issue-20   MR/PR → issue-20, merged by close
 #22  issue-22  born from issue-20   MR/PR → issue-20, merged by close
 #23  issue-23  born from issue-20   MR/PR → issue-20, merged by close
-issue-20  MR/PR → main, merged by the user
+issue-20  /crew:review 20, then MR/PR → main, merged by the user
 ```
 
-If there is no child to do but the mother does not have its MR/PR yet, jump to step 5.
+If there is no child to do but the mother does not have its MR/PR yet, jump to step 5: it is also
+where a run started again after `/crew:review <mother>` lands.
 
 ## 2. The mother branch
 
@@ -285,7 +288,7 @@ Keep the report's deviations: they go in the next child's runner prompt and in t
 
 Then move on to the next child.
 
-## 5. The mother's MR/PR
+## 5. The review of the mother, and its MR/PR
 
 When all the boxes of the mother's **Issues** section are ticked, go to the mother branch, at
 the tip the children left on `origin`: in a linked worktree the last child left you detached,
@@ -300,15 +303,32 @@ If either fails — the branch is checked out somewhere else, or it and `origin/
 diverged — stop and report it. A local branch strictly ahead of `origin`, say after merging the
 target branch into it for a review, is fine: `--ff-only` leaves it as it is.
 
-Then `close` on the mother, in its "mother" case: it redoes the verification on the final tree
-of the mother branch, aligns the documentation, pushes and opens the MR/PR
-`mother branch → target branch` with `Closes #<mother>`. **Never the merge**: the user approves
-and merges this one, like every MR/PR towards the target branch.
+Now the whole project is on the mother branch and nobody has reviewed it: the children's
+MR/PRs merged into it without a review. Towards the target branch nothing opens without a
+passed one, so before `close` on the mother you ask the gate whether the exact tip of the
+mother branch has it:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/review-gate.sh" <mother> "$(git rev-parse <mother-branch>)"
+```
+
+- **It passes** — a review already passed this exact tip, as in a run started again after
+  `/crew:review <mother>`: `close` on the mother, in its "mother" case. It redoes the verification
+  on the final tree of the mother branch, aligns the documentation, runs the gate again right
+  before the push, pushes and opens the MR/PR `mother branch → target branch` with
+  `Closes #<mother>`. **Never the merge**: the user approves and merges this one, like every
+  MR/PR towards the target branch.
+- **It refuses** — the normal outcome of a first run: no `close`, and no review of the mother by
+  this run, since it implemented the children and the verdict must come from a run other than the
+  one that opens the MR/PR. `rm -f "$GOAL_DIR/goal"` — otherwise the hook sends you back to
+  work —, then the delivery, with the gate's message as it was printed.
 
 ## 6. Delivery
 
-The link to the mother's MR/PR, at the top: it is the only thing the user has to do. Then a
-table, in the order the children entered the mother branch:
+At the top, what the user has to do: the link to the mother's MR/PR — or, when step 5 stopped for
+the review, the request to run `/crew:review <mother>`, then `/crew:close <mother>` or
+`/crew:big-implement <mother>` again, which finds the passed review at step 5 and opens the
+MR/PR. Then a table, in the order the children entered the mother branch:
 
 ```
 child   MR/PR  phases  merged into
@@ -318,9 +338,9 @@ child   MR/PR  phases  merged into
 ```
 
 Then the checkboxes left empty with the reason, the deviations written in the roadmaps, the
-problems the subagents saw outside their perimeter. And how to continue: once the mother's MR/PR
-is merged, `/crew:close <mother> --merged`, which closes the mother and deletes its
-branch.
+problems the subagents saw outside their perimeter. If step 5 stopped, the gate's message. And how
+to continue: once the mother's MR/PR is merged, `/crew:close <mother> --merged`, which closes the
+mother and deletes its branch.
 
 Do not paste the issues or the diff.
 
