@@ -1,7 +1,7 @@
 # The crew plugin
 
 From the request to the merge request, by way of an issue that holds the plan **and** the
-roadmap that carries it out. Six skills that hand the work to one another, on **GitLab** (`glab`)
+roadmap that carries it out. Seven skills that hand the work to one another, on **GitLab** (`glab`)
 or **GitHub** (`gh`) alike: the platform is deduced from the remote.
 
 The principle that holds it all together: *the issue must be executable by an agent that did not
@@ -14,9 +14,10 @@ out of scope.
 | `/crew:roadmap` | **what do we do now**: reads the project's documentation — the [research-flow](https://github.com/MatteoSid/Research-Master-Skills) registers if there are any, otherwise README, CLAUDE.md, docs — plus the open issues and the code, and proposes the next steps with their sources; once approved, it saves them in `ROADMAP.md` or creates their issues with `big-plan` |
 | `/crew:plan` | **one feature**: code reconnaissance, design forks put to the user, then opens the issue with the plan and a checkbox roadmap inside |
 | `/crew:big-plan` | **a large development**: defines the project roadmap in a mother issue and splits it into child issues, each written complete by a subagent |
-| `/crew:implement` | runs the roadmap one phase per subagent, ticks the boxes as it goes, one commit per phase; works like a `/goal` and does not stop until the roadmap is complete; on a mother issue it takes the first open child |
-| `/crew:big-implement` | runs all the children of a mother in one go on the mother's branch: one at a time, in order, each handed to a subagent that goes through `implement` and `close` and merges it into the mother branch on its own; at the end it opens the mother's MR/PR, which you merge |
-| `/crew:close` | verifies the final tree, opens the MR/PR, and once merged closes the issue and ticks it on the mother; a child of a project with a mother branch is merged there on its own |
+| `/crew:implement` | runs the roadmap one phase per subagent, ticks the boxes as it goes, one commit per phase; works like a `/goal` and does not stop until the roadmap is complete; on a mother issue it takes the first open child; `/crew:review` comes next |
+| `/crew:big-implement` | runs all the children of a mother in one go on the mother's branch: one at a time, in order, each handed to a subagent that goes through `implement` and `close` and merges it into the mother branch on its own; at the end it asks for the review of the mother, and after a passed one it opens the mother's MR/PR, which you merge |
+| `/crew:review` | re-runs the issue's verification on the branch tip, runs Claude Code's `code-review` on the diff against the target branch, checks the ticked boxes and the Out of scope against it, and writes the verdict and the reviewed SHA on the issue; it never edits code |
+| `/crew:close` | verifies the final tree, opens the MR/PR, and once merged closes the issue and ticks it on the mother; towards the target branch it opens nothing without a passed review of the exact commit; a child of a project with a mother branch is merged there on its own |
 
 Plus three subagents: `crew:issue-phase`, which runs a single phase and can neither commit
 nor touch the issue — the orchestrator does that, after checking the real output —;
@@ -40,7 +41,9 @@ The `marketplace add` clones with the machine's git credentials, so SSH works to
 `glab` or `gh` must be installed and authenticated — the skills check this at step 0 and stop
 with the command to run if it is missing. The login is interactive and Claude cannot do it.
 `jq` is also needed: `scripts/tracker.sh` uses it, and so do both hooks, `goal-stop.sh` and
-`agent-guard.sh`. Only tracker.sh calls `gh`/`glab`.
+`agent-guard.sh`, and the review gate. Only tracker.sh calls `gh`/`glab`. `/crew:review` needs
+Claude Code 2.1.246 or later, so that it can start `code-review` on its own, and no
+`"skillOverrides": {"code-review": "user-invocable-only"}` entry hiding it.
 
 ## Configuration
 
@@ -86,7 +89,8 @@ For a feature:
 ```
 /crew:plan add a date filter to the list                   →  opens issue #12
 /crew:implement 12                                         →  branch issue-12, one commit per phase
-/crew:close 12                                             →  opens the MR/PR
+/crew:review 12                                            →  re-runs the verification, writes the verdict
+/crew:close 12                                             →  opens the MR/PR, after a passed review
 /crew:close 12 --merged                                    →  once merged, closes the issue
 ```
 
@@ -95,6 +99,7 @@ For a development that does not fit in one issue:
 ```
 /crew:big-plan notification system with user preferences   →  mother #20, children #21 #22 #23
 /crew:implement 20                                         →  takes the first open child, #21
+/crew:review 21                                            →  reviews the branch of #21
 /crew:close 21                                             →  opens the MR/PR of #21
 /crew:close 21 --merged                                    →  closes #21 and ticks it on #20
 /crew:implement 20                                         →  now it is #22's turn, and so on
@@ -106,7 +111,9 @@ for the merges:
 
 ```
 /crew:big-implement 20      →  branch issue-20 from main; #21, #22, #23 are born from issue-20
-                                     and merge back into it on their own; then the MR/PR issue-20 → main
+                                     and merge back into it on their own; then it asks for the review
+/crew:review 20             →  reviews the whole mother branch against main
+/crew:close 20              →  opens the MR/PR issue-20 → main
 /crew:close 20 --merged     →  after you have merged the mother's MR/PR: closes #20
 ```
 
@@ -139,7 +146,7 @@ children of the project and the mother, up to the last merge into the mother bra
 state lives in `.git/crew/` (the files `goal`, `in-flight` and `blocks`), outside the
 commits.
 
-## The three rules the plugin does not negotiate
+## The four rules the plugin does not negotiate
 
 **Tick as you go.** At the end of each phase, in the same commit that carries it — not when the
 work is done. A roadmap that does not say its own state is useless, and one that lies is worse
@@ -151,6 +158,11 @@ ticked from the page in the meantime.
 
 **The MR/PR is opened, not merged.** The merge is requested by the user, always — not even with
 green pipelines.
+
+**No pull request towards the target branch without a passed review of its exact commit.**
+`/crew:review` writes the verdict and the SHA it reviewed, and `close` checks it right before the
+push: one commit after the review needs a new one. The child on the mother branch is the
+exception: it merges into the project's worksite, and the review of the mother covers it.
 
 ## Language
 
