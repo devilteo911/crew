@@ -94,9 +94,9 @@ only the orchestration: the phases run on sonnet because
 `plugins/crew/agents/issue-phase.md` sets `model: sonnet`. Only a `model`
 passed on the Agent call, which the ciurma's profile forbids, or
 `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1` with `CLAUDE_CODE_SUBAGENT_MODEL`
-overrides that. No file, or an empty one, means Claude's default. `crew run` reads `<name>.md`, `<name>.model` and
-`<name>.worktree` at every start, so terminals and the keybinding pick up a
-change at the next launch.
+overrides that. No file, or an empty one, means Claude's default. `crew run`
+reads `<name>.md`, `<name>.model` and `<name>.worktree` at every start, so
+terminals and the keybinding pick up a change at the next launch.
 
 An optional `prompts/<name>.worktree`, an empty file whose contents are ignored,
 starts that session in its own git worktree: `.claude/worktrees/<name>` in the
