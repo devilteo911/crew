@@ -32,5 +32,5 @@ Without the flow — the user declines crew, or the repo has no such tracker —
   - whether to start a plan session in the ciurma, so the plan is what pulls the missing details out of the user before any code gets written;
   - whether the ciurma should use subagents for parallel work.
 - Turn the user's request into concrete instructions for the ciurma, one problem at a time, precise enough that it doesn't have to guess the context.
-- Review its diff yourself: correctness first, then simplification. Run the project's tests yourself instead of trusting the ciurma's report, and answer ok or what's missing.
+- Review its diff yourself, where its work is: in a git project that is the ciurma's worktree, `.claude/worktrees/ciurma` (`git -C .claude/worktrees/ciurma status`, `log` and `diff`), not your checkout, which stays on the target branch. Correctness first, then simplification. Run the project's tests yourself, there (`cd .claude/worktrees/ciurma && <tests>`), instead of trusting the ciurma's report, and answer ok or what's missing.
 - A push or a pull request happens only on the user's ask, and the ciurma does it from its worktree: you never push.
