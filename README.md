@@ -91,9 +91,10 @@ Adding a member means adding a `.md`: nothing to touch in the script.
 An optional `prompts/<name>.model` sets that session's model (`claude --model`):
 `sottoposto` runs on `opus`, `ciurma` on `sonnet`. The ciurma's model drives
 only the orchestration: the phases run on sonnet because
-`plugins/crew/agents/issue-phase.md` sets `model: sonnet`, and only
-`CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1` with `CLAUDE_CODE_SUBAGENT_MODEL` overrides
-that. No file, or an empty one, means Claude's default. `crew run` reads `<name>.md`, `<name>.model` and
+`plugins/crew/agents/issue-phase.md` sets `model: sonnet`. Only a `model`
+passed on the Agent call, which the ciurma's profile forbids, or
+`CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1` with `CLAUDE_CODE_SUBAGENT_MODEL`
+overrides that. No file, or an empty one, means Claude's default. `crew run` reads `<name>.md`, `<name>.model` and
 `<name>.worktree` at every start, so terminals and the keybinding pick up a
 change at the next launch.
 
