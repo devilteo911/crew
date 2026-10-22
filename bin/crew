@@ -55,9 +55,10 @@ migrate() {
   [ "$root" = "$HOME/.local/share/crew" ] || return 0
   [ -z "$(git -C "$root" config --get crew.migrated 2>/dev/null)" ] || return 0
   command -v claude >/dev/null 2>&1 || return 0
-  # set before the calls, so a terminal started meanwhile does not migrate twice; no retry, the warning says how
-  git -C "$root" config crew.migrated 3.0.0 2>/dev/null || return 0
+  # a failed list sets nothing, so the next launch retries; once it answered, the flag goes before
+  # the calls, so a terminal started meanwhile does not migrate twice; no retry, the warning says how
   l=$(claude plugin list --json </dev/null 2>/dev/null) || return 0
+  git -C "$root" config crew.migrated 3.0.0 2>/dev/null || return 0
   case $l in *'"issue-flow@crew"'*) ;; *) return 0 ;; esac
   if claude plugin marketplace update crew </dev/null >/dev/null 2>&1 &&
     { case $l in *'"crew@crew"'*) ;; *) claude plugin install crew@crew </dev/null >/dev/null 2>&1 ;; esac; } &&

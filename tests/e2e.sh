@@ -26,13 +26,14 @@ clone="$HOME/.local/share/crew"
 # --- stubs ---------------------------------------------------------------------------------
 
 # claude: one log line "<cwd> <args>"; the installed plugins are the ids in $t/plugins, one per
-# line: plugin list --json prints them, install, uninstall and marketplace remove change them
+# line: plugin list --json prints them, install, uninstall and marketplace remove change them.
+# While $t/list-fails exists, the next plugin list --json removes it and fails.
 cat >"$t/bin/claude" <<EOF
 #!/bin/sh
 printf '%s\n' "\$PWD \$*" >>"$t/claude.log"
 p="$t/plugins"
 case "\$*" in
-  'plugin list --json') printf '[%s]\n' "\$(sed 's/.*/{"id":"&"}/' "\$p" | paste -s -d, -)" ;;
+  'plugin list --json') ! rm "$t/list-fails" 2>/dev/null || exit 1; printf '[%s]\n' "\$(sed 's/.*/{"id":"&"}/' "\$p" | paste -s -d, -)" ;;
   'plugin install '*) printf '%s\n' "\$3" >>"\$p" ;;
   'plugin uninstall '*) grep -vxF -- "\$3" "\$p" >"\$p.new"; cat "\$p.new" >"\$p" ;;
   'plugin marketplace remove '*) grep -v -- "@\$4\\\$" "\$p" >"\$p.new"; cat "\$p.new" >"\$p" ;;
@@ -371,6 +372,21 @@ is "$(grep -c ' plugin ' "$t/claude.log")" -eq "$p1"
 check "E: the second launch adds no plugin command" $?
 is ! -s "$t/e2.err"
 check "E: the second launch prints nothing on stderr" $?
+
+# a plugin list that fails once leaves nothing done and nothing remembered: the next launch migrates.
+# 'crew run' alone, since every session a plain 'crew' opens runs migrate() again.
+g -C "$clone" config --unset crew.migrated || die "setup: unset crew.migrated"
+printf '%s\n' issue-flow@crew >"$t/plugins"
+: >"$t/list-fails"
+n0=$(loglines)
+( cd "$t/proj" && CREW_NO_UPDATE=1 crew run ciurma ) >"$t/e3.out" 2>"$t/e3.err"
+is ! -e "$t/list-fails" && is "$(new_count "$n0" ' plugin install ')" -eq 0 && is "$(sessions_after "$n0")" -eq 1
+check "E: a failed plugin list installs nothing and the session starts" $?
+is -z "$(g -C "$clone" config --get crew.migrated)"
+check "E: a failed plugin list leaves crew.migrated unset" $?
+( cd "$t/proj" && CREW_NO_UPDATE=1 crew run ciurma ) >"$t/e4.out" 2>"$t/e4.err"
+is "$(cat "$t/plugins")" = crew@crew && is "$(g -C "$clone" config --get crew.migrated)" = 3.0.0
+check "E: the next launch replaces issue-flow@crew and sets crew.migrated" $?
 
 # =============================================================================================
 echo "== F: the curl installer on issue-flow@crew and upstream's issue-flow@issue-flow"
