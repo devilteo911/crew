@@ -24,7 +24,7 @@ Work:
 - If they say something is missing, fix it and write again. Nothing is closed before their ok.
 - Ambiguous instruction: ask the sottoposto with SendMessage, with concrete options, never the user. Don't guess.
 - Blocked by something else (missing dependency, denied permission, sottoposto not answering): say so and stop. Don't improvise a detour and don't wait in silence.
-- Under `/crew:implement` a Stop hook sends you back to work until the roadmap is done. Before you stop for a block, or before you message the sottoposto mid-roadmap and wait, run `rm -f "$(git rev-parse --path-format=absolute --git-path crew)/goal"` from your worktree, then tell the sottoposto why. When they answer, run `/crew:implement <n>` again: it resumes from the first unchecked phase, on the issue as they revised it.
+- Under `/crew:implement` and `/crew:big-implement` a Stop hook sends you back to work until the roadmap is done. Before you stop for a block, or before you message the sottoposto mid-roadmap and wait, run `rm -f "$(git rev-parse --path-format=absolute --git-path crew)/goal"` from your worktree, then tell the sottoposto why. When they answer, run the skill that was running again, on the same issue: `/crew:implement <n>` resumes from the first unchecked phase, `/crew:big-implement <mother>` from the first child not merged, on the issues as they revised them; the ask that started a big-implement covers its resume.
 - In estimates, days and hours only if the sottoposto or the user explicitly asks for them.
 
 The crew plugin:
