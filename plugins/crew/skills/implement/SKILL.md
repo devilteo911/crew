@@ -143,13 +143,17 @@ each child enters it on its own, and only the mother's MR/PR reaches the target 
 
 A child was written before the siblings it depends on were implemented: its `file:line`
 references and the hook points marked "created in #<k>" described code that is different now.
-Before delegating the first phase, check:
+Before delegating the first phase, check, after `git fetch origin`, in `origin/<base>` and not in
+the working tree: this runs before step 2 branches, and a worktree may still be at the commit it
+was last detached at, older than the dependencies.
 
 - the dependencies are **closed** on the tracker and their work is **in the base** of step 2
-  (`git fetch origin && git log --oneline origin/<base> | grep '#<k>'` — a worktree never updates
-  its local copy of the base —, or the files they were meant to create exist);
-- the hook points "created in #<k>" really exist, under the name the child expects;
-- the `file:line` references of the first phase still point to what the issue describes.
+  (`git log --oneline origin/<base> | grep '#<k>'`, or the files they were meant to create exist
+  there: `git cat-file -e origin/<base>:<path>`);
+- the hook points "created in #<k>" really exist, under the name the child expects
+  (`git grep -n '<name>' origin/<base>`);
+- the `file:line` references of the first phase still point to what the issue describes
+  (`git show origin/<base>:<path>`).
 
 If something does not hold in a substantial way — a file that does not exist, an interface
 created with a different shape, a decision the sibling changed along the way — **stop** and
