@@ -33,7 +33,8 @@ kind() {
   case $url in
     *github*) echo gh ;;
     *gitlab*) echo glab ;;
-    *) die "origin is $url: neither GitHub nor GitLab, ask the user which tracker this is" ;;
+    # the URL without its user:token@, which would otherwise land in the agent's transcript
+    *) die "origin is $(sed -E 's#^([a-z+]+://)[^/@]*@#\1#' <<<"$url"): neither GitHub nor GitLab, ask the user which tracker this is" ;;
   esac
 }
 

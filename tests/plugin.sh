@@ -191,6 +191,10 @@ is "$rc" -ne 0
 check "kind: a remote that is neither exits non-zero" $?
 is "$out" = ""
 check "kind: a remote that is neither prints nothing" $?
+g -C "$t/repo" remote set-url origin https://oauth2:tok-secret@git.example.com/o/r.git || die "setup: origin with a token"
+run kind
+is "$rc" -ne 0 && has_text "$err" "https://git.example.com/o/r.git" && ! has_text "$err" tok-secret
+check "kind: a remote that is neither names its URL without the credentials in it" $?
 g -C "$t/repo" remote remove origin || die "setup: remove origin"
 run kind
 is "$rc" -ne 0
