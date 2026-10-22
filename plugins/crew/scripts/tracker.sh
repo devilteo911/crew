@@ -166,10 +166,135 @@ comment_list() { # n
     | map(.body |= ((. // "") | gsub("\r"; "")))' <<<"$j" || die "unreadable answer of $K for the comments of issue #$1"
 }
 
-# command and arity; the mr commands are not here yet
+# mr_create <issue> <head> <base> <title> <file>: the new MR/PR's number
+mr_create() {
+  local f=$5 body out n
+  [ -s "$f" ] || die "$f is empty: refusing to open an MR/PR with an empty body"
+  if [ "$K" = gh ]; then
+    # gh has no --related-issue: the link to the issue is `Closes #<issue>` on the first line of the body
+    body=$f
+    if [ "$(head -n 1 "$f" | tr -d '\r')" != "Closes #$1" ]; then
+      tmp=$(mktemp) || die "cannot make a temporary file"
+      trap 'rm -f "$tmp"' EXIT
+      { printf 'Closes #%s\n\n' "$1"; cat "$f"; } >"$tmp" || die "cannot write $tmp"
+      body=$tmp
+    fi
+    out=$(gh pr create --head "$2" --base "$3" --title "$4" --body-file "$body") || die "gh pr create failed"
+  else
+    out=$(glab mr create --related-issue "$1" --source-branch "$2" --target-branch "$3" --title "$4" \
+      --description-file "$f" --remove-source-branch --yes) || die "glab mr create failed"
+  fi
+  n=$(sed -nE 's#.*/(pull|merge_requests)/([0-9]+).*#\2#p' <<<"$out" | tail -n 1)
+  [ -n "$n" ] || die "no MR/PR number in the answer of $K: $out"
+  echo "$n"
+}
+
+# mr_list [--head B] [--base B] [--merged]: [{number,state,head,base,url}], state lowercase, open unless --merged
+mr_list() {
+  local head='' base='' st=open j sel a
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --head) [ -n "${2:-}" ] || usage; head=$2; shift ;;
+      --base) [ -n "${2:-}" ] || usage; base=$2; shift ;;
+      --merged) st=merged ;;
+      *) usage ;;
+    esac
+    shift
+  done
+  if [ "$K" = gh ]; then
+    a=(--state "$st" --limit 1000 --json "number,state,headRefName,baseRefName,url")
+    [ -n "$head" ] && a+=(--head "$head")
+    [ -n "$base" ] && a+=(--base "$base")
+    j=$(gh pr list "${a[@]}") || die "gh pr list failed"
+    sel='{number, state, head: .headRefName, base: .baseRefName, url}'
+  else
+    # ponytail: one page of 100 is enough for the MRs of one branch; paginate with glab api if a branch ever has more
+    a=(--per-page 100 --output json)
+    [ -n "$head" ] && a+=(--source-branch "$head")
+    [ -n "$base" ] && a+=(--target-branch "$base")
+    [ "$st" = merged ] && a+=(--merged)
+    j=$(glab mr list "${a[@]}") || die "glab mr list failed"
+    sel='{number: .iid, state, head: .source_branch, base: .target_branch, url: .web_url}'
+  fi
+  jq -en 'input | (. // []) | map('"$sel"' | .state |= (ascii_downcase | sub("^opened$"; "open")))' <<<"$j" ||
+    die "unreadable answer of $K for the MR/PR list"
+}
+
+# mr_state <n|branch>: open | merged | closed
+mr_state() {
+  local j
+  if [ "$K" = gh ]; then
+    j=$(gh pr view "$1" --json state) || die "gh pr view $1 failed"
+  else
+    j=$(glab mr view "$1" --output json) || die "glab mr view $1 failed"
+  fi
+  jq -enr 'input | .state | ascii_downcase | sub("^opened$"; "open")' <<<"$j" || die "unreadable answer of $K for the state of MR/PR $1"
+}
+
+mr_retarget() { # n base
+  [ -n "$2" ] || die "no base branch given"
+  if [ "$K" = gh ]; then
+    gh pr edit "$1" --base "$2" >/dev/null || die "gh pr edit $1 failed"
+  else
+    glab mr update "$1" --target-branch "$2" --yes >/dev/null || die "glab mr update $1 failed"
+  fi
+}
+
+# mr_checks <n>: waits for the pipelines; prints success | none, or the failure and exit 1
+mr_checks() {
+  local j s out
+  if [ "$K" = gh ]; then
+    out=$(gh pr checks "$1" --watch --fail-fast 2>&1) && { echo success; return; }
+    case $out in *"no checks reported"*) echo none; return ;; esac
+    echo "$out" >&2
+    echo failed
+    exit 1
+  fi
+  while :; do
+    j=$(glab mr view "$1" --output json) || die "glab mr view $1 failed"
+    # a missing head_pipeline is `none`, but an answer that is no MR at all must not read as green
+    s=$(jq -enr 'input | if .iid == null then error("not an MR") else .head_pipeline.status // "none" end' <<<"$j") ||
+      die "unreadable answer of glab for MR $1"
+    case $s in created|waiting_for_resource|preparing|pending|running|scheduled) sleep 10 ;; *) break ;; esac
+  done
+  echo "$s"
+  [ "$s" = success ] || [ "$s" = none ] || exit 1
+}
+
+# mr_merge <n> <sha>: merges only when the MR/PR does not target the default branch, and only that commit
+mr_merge() {
+  local b d base def s
+  [[ $2 =~ ^[0-9a-fA-F]{7,64}$ ]] || die "'$2' is not a commit sha: the merge must be tied to the commit that was verified"
+  if [ "$K" = gh ]; then
+    b=$(gh pr view "$1" --json baseRefName) || die "gh pr view $1 failed"
+    d=$(gh repo view --json defaultBranchRef) || die "gh repo view failed"
+    base=$(jq -enr 'input | .baseRefName | select(length > 0)' <<<"$b") || die "unreadable base branch of PR $1"
+    def=$(jq -enr 'input | .defaultBranchRef.name | select(length > 0)' <<<"$d") || die "unreadable default branch of the repo"
+  else
+    b=$(glab mr view "$1" --output json) || die "glab mr view $1 failed"
+    d=$(glab repo view --output json) || die "glab repo view failed"
+    base=$(jq -enr 'input | .target_branch | select(length > 0)' <<<"$b") || die "unreadable target branch of MR $1"
+    def=$(jq -enr 'input | .default_branch | select(length > 0)' <<<"$d") || die "unreadable default branch of the repo"
+  fi
+  [ "$base" != "$def" ] || die "MR/PR $1 targets $def, the default branch: that merge belongs to the user"
+  if [ "$K" = gh ]; then
+    # --merge keeps the phases' commits, with their (#<number>), in the history of the mother branch;
+    # --match-head-commit merges only the commit that was verified
+    gh pr merge "$1" --merge --match-head-commit "$2" --delete-branch >/dev/null || die "gh pr merge $1 failed"
+  else
+    # --auto-merge=false: without it glab defers the merge to the end of the pipeline, and the next child
+    # would be born from a mother branch that still lacks this one; --sha merges only the verified commit
+    glab mr merge "$1" --sha "$2" --auto-merge=false --remove-source-branch --yes >/dev/null || die "glab mr merge $1 failed"
+  fi
+  s=$(mr_state "$1") || exit 1
+  [ "$s" = merged ] || die "MR/PR $1 is $s after the merge, not merged: the server queued it, set auto-merge or refused it"
+}
+
+# command and arity
 case "${1:-} ${2:-}:$#" in
   "kind :1"|"check :1"|"list :1"|"view "*:2|"state "*:2|"close "*:2|"create "*:3) ;;
   "body get:4"|"body put:4"|"body put:5"|"comment add:4"|"comment list:3") ;;
+  "mr create:7"|"mr list:"*|"mr state:3"|"mr retarget:4"|"mr checks:3"|"mr merge:4") ;;
   *) usage ;;
 esac
 
@@ -181,6 +306,7 @@ command -v "$K" >/dev/null 2>&1 || {
 }
 
 case $1 in view|state|close) num "$2" ;; body|comment) num "$3" ;; esac
+case "$1 ${2:-}" in "mr create"|"mr retarget"|"mr checks"|"mr merge") num "$3" ;; esac
 [ "$1 ${2:-}:$#" = "body put:5" ] && [ "$5" != --shrink ] && usage
 
 case "$1 ${2:-}" in
@@ -194,4 +320,10 @@ case "$1 ${2:-}" in
   "close "*) close "$2" ;;
   "comment add") comment_add "$3" "$4" ;;
   "comment list") comment_list "$3" ;;
+  "mr create") mr_create "$3" "$4" "$5" "$6" "$7" ;;
+  "mr list") shift 2; mr_list "$@" ;;
+  "mr state") mr_state "$3" ;;
+  "mr retarget") mr_retarget "$3" "$4" ;;
+  "mr checks") mr_checks "$3" ;;
+  "mr merge") mr_merge "$3" "$4" ;;
 esac
