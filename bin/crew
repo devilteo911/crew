@@ -3,11 +3,27 @@
 # crew run <name>  starts the one session of that profile, here: the single place that builds the claude command
 # `run` is the subcommand only as an exact first argument; `crew ./run` opens the crew in a directory named run.
 # File name = session name; <name>.md = appended system prompt; optional <name>.model = --model value.
+# optional <name>.worktree (contents ignored) = in a git repo, the session works in its own worktree.
 set -e
 self=$(readlink "$0" || echo "$0")   # ~/.local/bin/crew is a symlink (install.sh)
 root=$(CDPATH='' cd -- "$(dirname -- "$self")/.." && pwd)
 self="$root/bin/crew"
 crewdir="${CREW_DIR:-$HOME/.claude/crew}"
+
+# git fetch in <dir>, bounded to 5 s (macOS has no timeout(1)); the fetch's status, non-zero when killed.
+# The group keeps the shell's own "Terminated" for the killed fetch off stderr.
+fetch5() { # <dir>
+  rc=0
+  {
+    # ponytail: 5 s watchdog; raise it if slow links matter
+    GIT_TERMINAL_PROMPT=0 git -C "$1" fetch -q >/dev/null 2>&1 & p=$!
+    (sleep 5; kill "$p") >/dev/null 2>&1 & w=$!
+    wait "$p" || rc=$?
+    kill "$w" 2>/dev/null || true
+    wait "$w" || true
+  } 2>/dev/null
+  return "$rc"
+}
 
 # Keeps the clone the curl installer manages up to date, once per launch (CREW_NO_UPDATE=1 skips it).
 # Every git call sits in a condition: a failed update warns once and the launch goes on.
@@ -17,15 +33,7 @@ update() {
   old=$(git -C "$root" rev-parse HEAD 2>/dev/null) || return 0
   ok=0
   # Only the fetch is bounded; the ff merge is local, and killing it halfway could leave a half-checked-out tree.
-  # The group keeps the shell's own "Terminated" for the killed fetch off stderr: the warning below is the one line.
-  {
-    # ponytail: 5 s watchdog, macOS has no timeout(1); raise it if slow links matter
-    GIT_TERMINAL_PROMPT=0 git -C "$root" fetch -q >/dev/null 2>&1 & p=$!
-    (sleep 5; kill "$p") >/dev/null 2>&1 & w=$!
-    if wait "$p" && git -C "$root" merge --ff-only -q '@{u}' >/dev/null 2>&1; then ok=1; fi
-    kill "$w" 2>/dev/null || true
-    wait "$w" || true
-  } 2>/dev/null
+  if fetch5 "$root" && git -C "$root" merge --ff-only -q '@{u}' >/dev/null 2>&1; then ok=1; fi
   if [ "$ok" -eq 0 ]; then
     echo "crew: could not update $root (offline, diverged or local changes), starting $(cat "$root/VERSION" 2>/dev/null || echo unknown) as is" >&2
   fi
@@ -71,11 +79,39 @@ migrate() {
 update "$@"
 migrate
 
+# cd into the worktree of profile <name>: <main checkout>/.claude/worktrees/<name>, at $PWD's subdirectory
+# when the worktree has it. The first launch creates it detached at origin/HEAD (HEAD without one); later
+# launches reuse it untouched: it may hold the session's branch with work in progress. Non-zero on failure.
+# ponytail: .claude/worktrees/ because Claude Code exempts it from its protected paths, and .git/ is one.
+into_worktree() { # <name>
+  common=$(git rev-parse --path-format=absolute --git-common-dir) &&
+    sub=$(git rev-parse --show-prefix) &&
+    top=$(git worktree list --porcelain | sed -n '1s/^worktree //p') &&
+    [ -n "$top" ] || return 1
+  wt="$top/.claude/worktrees/$1"
+  if [ ! -e "$wt" ]; then
+    # the main checkout's git status must not list the worktree
+    grep -qxF /.claude/worktrees/ "$common/info/exclude" 2>/dev/null ||
+      { mkdir -p "$common/info" && echo /.claude/worktrees/ >>"$common/info/exclude"; } || return 1
+    fetch5 . || :   # offline: the origin/HEAD already here will do, the skills fetch before branching
+    ref=origin/HEAD
+    git rev-parse -q --verify "$ref^{commit}" >/dev/null || ref=HEAD
+    # -f: a worktree deleted by hand, without git worktree remove, is still registered
+    git worktree add -q -f --detach "$wt" "$ref" >/dev/null 2>&1 || return 1
+  fi
+  [ "$(git -C "$wt" rev-parse --show-toplevel 2>/dev/null)" = "$wt" ] && cd "$wt" || return 1
+  sub=${sub%/}
+  if [ -n "$sub" ] && [ -d "$sub" ]; then cd "$sub"; fi
+}
+
 if [ "${1:-}" = run ]; then
   n="${2:-}"
   f="$crewdir/$n.md"
   [ -n "$n" ] && [ -f "$f" ] || { echo "crew: no profile '$n' in $crewdir" >&2; exit 1; }
   m=$(cat "${f%.md}.model" 2>/dev/null | tr -d '[:space:]')
+  if [ -f "${f%.md}.worktree" ] && [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = true ]; then
+    into_worktree "$n" || echo "crew: could not set up the worktree of $n, starting in $PWD" >&2
+  fi
   exec claude -n "$n" ${m:+--model "$m"} --append-system-prompt-file "$f"
 fi
 
