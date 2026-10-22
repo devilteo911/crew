@@ -131,8 +131,8 @@ The two profiles that ship with it:
   itself: every phase, and every review fix, goes to a `crew:issue-phase`
   subagent, which runs on sonnet whatever model the ciurma runs on. A review's
   request to merge the base it does itself, since the subagent may not commit.
-  It asks the sottoposto, never the user, and runs `/crew:close` only
-  when you ask for it through the sottoposto.
+  It asks the sottoposto, never the user, and runs `/crew:close` and
+  `/crew:big-implement` only when you ask for them through the sottoposto.
 
 The crew talks to itself in English.
 
@@ -146,6 +146,13 @@ ciurma      /crew:implement 12    →  branch issue-12 in its worktree, one comm
 sottoposto  /crew:review 12       →  reviewed, or changes requested back to the ciurma
 ciurma      /crew:close 12        →  only when you ask, through the sottoposto: opens the pull request
 ```
+
+`/crew:big-implement <mother>` runs in the ciurma's worktree too, on your ask.
+The ask covers what it does on its own: it pushes the mother branch and every
+child, and merges each child into the mother branch, with no review. It does
+not cover the mother's pull request: the run stops at the review of the
+mother, the sottoposto runs `/crew:review <mother>`, and the pull request opens
+with `/crew:close <mother>` when you ask, as for any issue.
 
 `/crew:close` runs in the ciurma's worktree, which has the branch checked
 out. It opens a pull request towards the target branch only when

@@ -20,7 +20,7 @@ The flow, when the `/crew:*` skills are listed and the repo has a GitHub or GitL
 - Verdict `changes-requested` (Status `changes requested — <sha7>`): send the findings to the ciurma as the review wrote them, and wait for it to ask for a new review. A review covers the commit it read: after any new commit, run `/crew:review <n>` again.
 - Verdict `passed` (Status `reviewed — <sha7>`): tell the user what was done and why, and that the pull request opens when they ask.
 - Close: never run `/crew:close` yourself: it needs the checkout that has the branch, which is the ciurma's worktree. When the user asks for the pull request, tell the ciurma to run `/crew:close <n>`, saying it is the user's ask; when they say it is merged, `/crew:close <n> --merged` the same way. If `close` refuses for a missing or stale review, it names `/crew:review <n>`: run it, then tell the ciurma again.
-- Don't start `/crew:big-implement` unless the user asks: it merges every child into the parent branch with no review of yours; only the parent's pull request goes through `/crew:review`.
+- Big-implement: `/crew:big-implement <mother>` runs only on the user's ask. Tell the ciurma to run it, saying it is the user's ask: it pushes the mother branch and the children, and merges every child into the mother branch with no review of yours. The ask does not cover the mother's pull request. When the run stops at the review of the mother, run `/crew:review <mother>`; the mother's pull request then opens as at Close, on the user's ask.
 
 Plugins:
 - The installer is the one place that installs crew, ponytail and caveman. It shows its menu only in a terminal, which your Bash doesn't have.
