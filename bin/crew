@@ -128,8 +128,9 @@ wait=
 for f in "$crewdir"/*.md; do
   [ -e "$f" ] || { echo "crew: no profiles in $crewdir" >&2; exit 1; }
   n=$(basename "$f" .md)
-  # CREW_DIR in the command: Terminal.app's do script does not pass this process's environment on
-  cmd="cd '$d' && ${wait}CREW_DIR='$crewdir' CREW_NO_UPDATE=1 '$self' run '$n'"
+  # CREW_DIR in the command: Terminal.app's do script does not pass this process's environment on.
+  # The sleep goes before the cd: after it, its `;` would let a failed cd run the session anywhere.
+  cmd="${wait}cd '$d' && CREW_DIR='$crewdir' CREW_NO_UPDATE=1 '$self' run '$n'"
   case "$(uname -s)" in
     Darwin)
       osascript -e "tell app \"Terminal\" to do script \"$cmd\"" >/dev/null
