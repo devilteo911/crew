@@ -132,13 +132,15 @@ elif git show-ref -q --verify refs/remotes/origin/<mother-branch>; then
 else
   git switch --no-track -c <mother-branch> origin/<target>      # new: from the fetched target, never checked out
 fi
+# a branch from a previous round comes to origin's tip first, or its push is a rejected rewind
+! git show-ref -q --verify refs/remotes/origin/<mother-branch> || git merge --ff-only origin/<mother-branch>
 git push -u origin <mother-branch>
 ```
 
-If the branch already existed from a previous round, align it to `origin` with
-`git pull --ff-only`. If the target branch has moved on in the meantime, **do not** chase it: the
-mother branch is realigned only once, at step 5 — in `close` on the mother —, where a conflict
-is the user's decision.
+If the fast-forward fails, the local mother branch and `origin` diverged: stop and report it. If
+the target branch has moved on in the meantime, **do not** chase it: the mother branch is
+realigned only once, at step 5 — in `close` on the mother —, where a conflict is the user's
+decision.
 
 Bring the mother's **Status:** line to `in progress — k of M issues merged into <mother-branch>`.
 
