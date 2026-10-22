@@ -52,7 +52,8 @@ unticked phase, the MR/PR already open, the merge — instead of starting over.
 3. **Close**, in the "child on the mother branch" case: the checks of step 1, the documentation
    of step 2, the MR/PR of step 3 **towards the mother branch**, the merge and the closing of
    step 3 bis — the issue closed, the child's **Status:**, the box ticked on the mother with the
-   **Status:** `k of M`, and you back on the updated mother branch.
+   **Status:** `k of M`, and you at the tip of the mother branch, freshly fetched (detached there
+   in a linked worktree, as `close` step 3 bis says).
 
 ## What you do not do
 

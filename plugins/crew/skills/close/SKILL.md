@@ -246,10 +246,17 @@ what it says. Why it merges the way it does is in `TRACKER.md` §5.
 **The closing**, without waiting for `--merged`: all of step 4 — the issue closed, the child's
 **Status:** to `closed — merged into <mother-branch> on DD/MM/YYYY`, the working branch deleted
 if the server has not already done it, and the box ticked on the mother as in "The mother, if
-the issue is a child". Locally you go back to the mother branch, updated:
+the issue is a child". Locally you go to the tip of the mother branch, freshly fetched (`<base>`
+below is the mother branch). A linked worktree must never take a branch the main checkout may
+need, so there you detach at `origin/<base>` instead of switching to it:
 
 ```bash
-git switch <mother-branch> && git pull --ff-only
+git fetch origin
+if [ "$(git rev-parse --path-format=absolute --git-dir)" = "$(git rev-parse --path-format=absolute --git-common-dir)" ]; then
+  git switch <base> && git pull --ff-only     # the main checkout: back on the base, as before
+else
+  git switch --detach origin/<base>           # a linked worktree: the tip of the base, no branch taken
+fi
 ```
 
 ## 4. After the merge — `--merged`
@@ -268,11 +275,11 @@ is what you tell the user, not that you closed it.
 
 Then bring the **Status:** line to `closed — merged on DD/MM/YYYY`, with today's date — for the
 mother, `closed — completed on DD/MM/YYYY` — with the `body get` **after** the close, because the
-close moved the issue's timestamp, then the edit and `body put`. Locally: `git switch <base> &&
-git pull --ff-only`. The working branch is deleted only if the server has not already done it —
-`mr merge` deletes it for the child on the mother branch, GitLab does it for an MR opened by
-`mr create`, GitHub does it when the repo's "Automatically delete head branches" option is on —,
-and if none has removed it, `git push origin --delete <branch>`.
+close moved the issue's timestamp, then the edit and `body put`. Locally: the block at the end of
+step 3 bis, with this issue's `<base>`. The working branch is deleted only if the server has not
+already done it — `mr merge` deletes it for the child on the mother branch, GitLab does it for an
+MR opened by `mr create`, GitHub does it when the repo's "Automatically delete head branches"
+option is on —, and if none has removed it, `git push origin --delete <branch>`.
 
 If the state of the MR/PR is not `merged`, close nothing and say so.
 

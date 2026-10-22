@@ -125,9 +125,13 @@ precisely from its existence on `origin`.
 ```bash
 git status --porcelain                 # must be empty
 git fetch origin
-git switch <mother-branch> 2>/dev/null \
-  || git switch -c <mother-branch> --track origin/<mother-branch> 2>/dev/null \
-  || { git switch <target> && git pull --ff-only && git switch -c <mother-branch>; }
+if git show-ref -q --verify refs/heads/<mother-branch>; then
+  git switch <mother-branch>                                    # resumed
+elif git show-ref -q --verify refs/remotes/origin/<mother-branch>; then
+  git switch -c <mother-branch> --track origin/<mother-branch>  # started elsewhere
+else
+  git switch --no-track -c <mother-branch> origin/<target>      # new: from the fetched target, never checked out
+fi
 git push -u origin <mother-branch>
 ```
 
@@ -207,15 +211,21 @@ The base of every child is the updated mother branch, **after** the previous sib
 
 ```bash
 git status --porcelain                 # must be empty
-git switch <branch> 2>/dev/null \
-  || { git switch <mother-branch> && git pull --ff-only && git switch -c <branch>; }
+git fetch origin
+if git show-ref -q --verify refs/heads/<branch>; then
+  git switch <branch>                                       # resumed
+elif git show-ref -q --verify refs/remotes/origin/<branch>; then
+  git switch -c <branch> --track origin/<branch>            # started elsewhere
+else
+  git switch --no-track -c <branch> origin/<mother-branch>  # new: from the fetched mother branch
+fi
 ```
 
 It is the rule of step 2 of `implement` with the mother branch in place of the target branch:
 that is where the siblings already merged are. The check of step **1 ter** of `implement` is
 made against the mother branch: the dependencies are closed and their work is there
-(`git log --oneline <mother-branch> | grep '#<k>'`), and the hook points "created in #<k>" exist
-there. If they do not hold, you stop as `implement` says.
+(`git log --oneline origin/<mother-branch> | grep '#<k>'`), and the hook points "created in
+#<k>" exist there. If they do not hold, you stop as `implement` says.
 
 #### The phases
 
@@ -237,7 +247,9 @@ the closing of step 3 bis, which do not wait for the user. At the end:
 - the child's MR/PR is merged into the mother branch, and the child's branch is deleted;
 - the child is closed, with **Status:** `closed — merged into <mother-branch> on DD/MM/YYYY`;
 - its box on the mother is ticked, and the mother's **Status:** says `k of M`;
-- you are on the mother branch, updated: the next child is born from here.
+- you are at the tip of the mother branch, freshly fetched: on the branch in the main checkout,
+  detached at `origin/<mother-branch>` in a linked worktree (`close`, step 3 bis). The next child
+  is born from here.
 
 If `close` stops — an empty box, a red verification, a failed pipeline, an MR/PR that the server
 does not merge — the runner stops and writes it in the report.
@@ -257,10 +269,10 @@ server and on git:
 # its box is ticked on the mother: re-read the mother from the server
 "${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body get <mother> "$SCRATCH/mother.md"
 
-# you are on the mother branch, clean and updated, with the child's commits in it
-git branch --show-current && git status --porcelain
-git fetch origin && git status -sb | head -1              # no "behind"
-git log --oneline <mother-branch> | grep '(#<child>)'
+# you are clean, at the tip of the mother branch, with the child's commits in it
+git status --porcelain                                          # empty
+git fetch origin && git rev-parse HEAD origin/<mother-branch>   # the same SHA twice
+git log --oneline origin/<mother-branch> | grep '(#<child>)'
 ```
 
 If the runner stopped, or one of these checks does not come out right, the project stops: see
