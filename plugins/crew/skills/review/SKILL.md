@@ -116,9 +116,13 @@ inside awk: Claude Code replaces it with the skill's argument when it loads the 
 Stop if:
 
 - `$SHA` is empty: there is no branch, locally or on `origin`;
-- the local branch and `origin/<branch>` both exist and differ, because then it is not clear which
-  commit `close` will push. Say which one is ahead (`git rev-list --left-right --count
-  refs/heads/<branch>...refs/remotes/origin/<branch>`);
+- the local branch and `origin/<branch>` both exist and `origin/<branch>` has commits the local
+  branch lacks — `git rev-list --count refs/heads/<branch>..refs/remotes/origin/<branch>` is not
+  0 —, because then `origin` is ahead or the two diverged, and it is not clear which commit `close`
+  will push. Say which (`git rev-list --left-right --count
+  refs/heads/<branch>...refs/remotes/origin/<branch>`). A local branch strictly ahead is no stop:
+  its tip is what `close` pushes — after it merged `origin/<base>` into a branch already on
+  `origin`, say — and `$SHA` is that tip;
 - `$WT` is set and `git -C "$WT" status --porcelain` is not empty: uncommitted work is not in the
   commit under review.
 
