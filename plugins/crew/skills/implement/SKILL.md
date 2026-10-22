@@ -6,7 +6,7 @@ hooks:
   Stop:
     - hooks:
         - type: command
-          command: "${CLAUDE_PLUGIN_ROOT}/scripts/goal-stop.sh"
+          command: "\"${CLAUDE_PLUGIN_ROOT}/scripts/goal-stop.sh\""
           timeout: 60
 ---
 
