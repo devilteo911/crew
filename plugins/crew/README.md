@@ -39,7 +39,8 @@ The `marketplace add` clones with the machine's git credentials, so SSH works to
 
 `glab` or `gh` must be installed and authenticated — the skills check this at step 0 and stop
 with the command to run if it is missing. The login is interactive and Claude cannot do it.
-`jq` is also needed, which the `implement` hook uses.
+`jq` is also needed: `scripts/tracker.sh` uses it, and so do both hooks, `goal-stop.sh` and
+`agent-guard.sh`. Only tracker.sh calls `gh`/`glab`.
 
 ## Configuration
 
@@ -157,12 +158,29 @@ Issue bodies, merge/pull request bodies and `ROADMAP.md` are written in English,
 [Issues-Master-Skills](https://github.com/MatteoSid/Issues-Master-Skills) from `2305db3`. How
 to migrate a machine: [crew's README, "The crew plugin"](../../README.md#the-crew-plugin).
 
+## 3.1.0
+
+3.1.0 sends every tracker call through `scripts/tracker.sh`. Its `body put` refuses an empty
+file, a file under half the body (unless `--shrink`), and an issue changed since `body get`. The
+Stop hook reads the issues through tracker.sh, with a 60 s timeout, and its command is quoted, so
+a plugin path with a space no longer switches goal mode off. `crew:issue-phase` and
+`crew:issue-writer` have Bash again: a `disallowedTools` entry with a specifier, such as
+`Bash(git commit:*)`, removed the whole tool. `scripts/agent-guard.sh`, a PreToolUse hook of the
+plugin, now refuses their commits and their tracker writes. `tests/plugin.sh` tests the plugin's
+scripts in CI.
+
 ## GitLab and GitHub
 
-`TRACKER.md`, in the plugin folder, has the full command mapping and the differences that bite:
-the body field that is called `description` here and `body` there, the `--limit` of
-`gh issue list` stuck at 30, `task_completion_status` that exists only on GitLab, the CRLFs in
-bodies written from GitHub's web UI, `gh pr create` that has no `--related-issue`.
+`scripts/tracker.sh` is the only caller of `gh` and `glab`: it reads the platform from the
+`origin` remote and gives the same commands on both. They cover issues (`view`, `state`, `list`,
+`create`, `close`), bodies (`body get`, `body put`), comments and MR/PRs (`mr create`, `list`,
+`state`, `checks`, `merge`). `body put` rewrites a body only if the file is not empty, is not under
+half the body, and the issue has not changed since `body get`. `mr merge` never merges into the
+default branch. `TRACKER.md` holds the vocabulary of the two platforms and the traps tracker.sh
+absorbs: the body field called `description` on GitLab and `body` on GitHub, GitHub's 30-item
+lists, CRLF bodies from the web UI, GitLab's `opened`, `gh pr create` without `--related-issue`.
+`tests/plugin.sh` runs tracker.sh and both hooks against stubbed `gh` and `glab`, on both
+platforms.
 
 ## License
 

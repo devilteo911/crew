@@ -160,4 +160,4 @@ A release ships by bumping `VERSION` on the branch: merging it to `main` tags
 nothing.
 
 Every push and pull request runs `.github/workflows/check.yml` (shellcheck,
-`tests/e2e.sh` and `claude plugin validate --strict`); it must stay green.
+`tests/e2e.sh`, `tests/plugin.sh` and `claude plugin validate --strict`); it must stay green.
