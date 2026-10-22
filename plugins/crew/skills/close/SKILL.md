@@ -250,8 +250,9 @@ the issue is a child". Locally you go to the tip of the mother branch, freshly f
 below is the mother branch). A linked worktree must never take a branch the main checkout may
 need, so there you detach at `origin/<base>` instead of switching to it, and bring the local
 `<base>` to the same commit: whoever switches to it later — step 5 of `big-implement`, on the
-mother branch — lands on the tip, not on the commit the branch had when it was created. That
-fetch fails, silently, when another checkout has `<base>`; that checkout keeps it up to date:
+mother branch — lands on the tip, not on the commit the branch had when it was created. Only
+when no checkout has `<base>`: git before 2.36 would move a branch checked out elsewhere under
+that checkout's files, and the checkout that has it keeps it up to date itself.
 
 ```bash
 git fetch origin
@@ -259,7 +260,11 @@ if [ "$(git rev-parse --path-format=absolute --git-dir)" = "$(git rev-parse --pa
   git switch <base> && git pull --ff-only     # the main checkout: back on the base, as before
 else
   git switch --detach origin/<base>           # a linked worktree: the tip of the base, no branch taken
-  if git show-ref -q --verify refs/heads/<base>; then git fetch -q origin <base>:<base> 2>/dev/null || :; fi   # the local <base> there too
+  # the local <base> there too, unless a checkout has it
+  if git show-ref -q --verify refs/heads/<base> &&
+    ! git worktree list --porcelain | grep -qxF 'branch refs/heads/<base>'; then
+    git fetch -q origin <base>:<base> || :
+  fi
 fi
 ```
 
