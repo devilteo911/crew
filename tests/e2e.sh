@@ -1,7 +1,8 @@
 #!/bin/sh
 # End-to-end test of crew, in a throwaway HOME: the curl installer on a stale managed clone,
-# self-update at launch, an offline and a diverged clone, a development clone, `crew run`, and
-# the replacement of issue-flow@crew by crew@crew in the launcher and in the installer.
+# self-update at launch, an offline and a diverged clone, a development clone, `crew run`, the
+# replacement of issue-flow@crew by crew@crew in the launcher and in the installer, and a
+# profile's worktree.
 # Run it from anywhere: sh tests/e2e.sh
 # Every assertion prints "ok <what>" or "FAIL <what>" and the run goes on; the exit status is
 # 1 when any FAIL was printed. Nothing outside the temp dir changes: HOME and PATH are
@@ -15,7 +16,8 @@ t=$(CDPATH='' cd -- "$t" && pwd -P) || exit 1
 
 export HOME="$t/home"
 export PATH="$t/bin:$HOME/.local/bin:/usr/bin:/bin"
-export TERMINAL="$t/bin/term" SHELL=/bin/true GIT_TERMINAL_PROMPT=0 GIT_CONFIG_NOSYSTEM=1 XDG_CONFIG_HOME="$HOME/.config"
+# GIT_CEILING_DIRECTORIES: $t/proj is not a repo wherever mktemp put $t, so A-D hold whether or not crew's prompts ship a .worktree
+export TERMINAL="$t/bin/term" SHELL=/bin/true GIT_TERMINAL_PROMPT=0 GIT_CONFIG_NOSYSTEM=1 XDG_CONFIG_HOME="$HOME/.config" GIT_CEILING_DIRECTORIES="$t"
 unset SSH_AUTH_SOCK GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE CREW_DIR CREW_NO_UPDATE CREW_REPO
 mkdir -p "$HOME" "$t/bin" "$t/bin-noclaude" || exit 1
 cd "$t" || exit 1
@@ -413,6 +415,104 @@ n1=$(loglines)
 ( cd "$t" && detach sh <"$src/install.sh" ) >"$t/f2.out" 2>"$t/f2.err"
 is "$(new_count "$n1" ' plugin ')" -eq "$(new_count "$n1" ' plugin list --json$')"
 check "F: a second installer run only lists the plugins" $?
+
+# =============================================================================================
+echo "== G: a profile with a .worktree works in its own git worktree"
+# Throwaway profiles, never crew's own prompts/, so this holds whether or not those ship a .worktree.
+# The project clones $t/origin.git, so its origin/HEAD is origin/main. Every launch goes through the
+# managed clone's crew with CREW_NO_UPDATE=1: whatever state E and F left it in, it is not updated.
+mkdir -p "$t/profiles" || die "setup: profiles directory"
+echo 'a profile that works in its own worktree' >"$t/profiles/worker.md"
+: >"$t/profiles/worker.worktree"
+echo 'a profile without one' >"$t/profiles/lead.md"
+g clone -q "$t/origin.git" "$t/wproj" || die "setup: project clone"
+wt="$t/wproj/.claude/worktrees/worker"
+wrun() { ( cd "$1" && CREW_DIR="$t/profiles" CREW_NO_UPDATE=1 crew run "$2" ); } # <dir> <profile>
+line_of() { printf '%s -n %s --append-system-prompt-file %s' "$1" "$2" "$t/profiles/$2.md"; } # <dir> <profile>
+
+n0=$(loglines)
+wrun "$t/wproj" worker >"$t/g1.out" 2>"$t/g1.err"
+new_has "$n0" "$(line_of "$wt" worker)"
+check "G: the first launch starts worker in its worktree" $?
+is "$(g -C "$wt" rev-parse HEAD)" = "$(g -C "$t/wproj" rev-parse origin/main)" && ! g -C "$wt" symbolic-ref -q HEAD >/dev/null 2>&1
+check "G: the worktree is detached at origin/main" $?
+is -z "$(g -C "$t/wproj" status --porcelain)"
+check "G: the main checkout's git status stays clean" $?
+is ! -s "$t/g1.err"
+check "G: the first launch prints nothing on stderr" $?
+
+# reuse: the branch and the untracked file the session made are still there
+# (no die here: with no worktree, the check below fails and the rest of G still runs)
+g -C "$wt" switch -q -c issue-7 >/dev/null 2>&1
+{ echo 'work in progress' >"$wt/wip"; } 2>/dev/null
+n0=$(loglines)
+wrun "$t/wproj" worker >"$t/g2.out" 2>"$t/g2.err"
+new_has "$n0" "$(line_of "$wt" worker)"
+check "G: a second launch starts worker in the same worktree" $?
+is "$(g -C "$wt" branch --show-current)" = issue-7 && is -e "$wt/wip"
+check "G: the second launch leaves the worktree's branch and files alone" $?
+
+# from a subdirectory, the same subdirectory of the worktree when it has one
+n0=$(loglines)
+wrun "$t/wproj/prompts" worker >"$t/g3.out" 2>"$t/g3.err"
+new_has "$n0" "$(line_of "$wt/prompts" worker)"
+check "G: from a tracked subdirectory, worker starts in the same one of its worktree" $?
+mkdir "$t/wproj/local-only" || die "setup: untracked subdirectory"
+n0=$(loglines)
+wrun "$t/wproj/local-only" worker >"$t/g4.out" 2>"$t/g4.err"
+new_has "$n0" "$(line_of "$wt" worker)"
+check "G: from an untracked subdirectory, worker starts at the worktree's root" $?
+
+n0=$(loglines)
+wrun "$t/wproj" lead >"$t/g5.out" 2>"$t/g5.err"
+new_has "$n0" "$(line_of "$t/wproj" lead)"
+check "G: a profile without a .worktree starts where it was launched" $?
+
+# the launcher loop reaches the same code through 'crew run' in each terminal
+n0=$(loglines)
+CREW_DIR="$t/profiles" CREW_NO_UPDATE=1 crew "$t/wproj" >"$t/g6.out" 2>"$t/g6.err"
+wait_sessions "$n0" 2
+new_has "$n0" "$(line_of "$t/wproj" lead)"
+check "G: the launcher starts lead in the project" $?
+new_has "$n0" "$(line_of "$wt" worker)"
+check "G: the launcher starts worker in its worktree" $?
+
+# not a git repo: as before (GIT_CEILING_DIRECTORIES keeps $t/proj out of any repo)
+n0=$(loglines)
+wrun "$t/proj" worker >"$t/g7.out" 2>"$t/g7.err"
+new_has "$n0" "$(line_of "$t/proj" worker)"
+check "G: outside a git repo, worker starts where it was launched" $?
+is ! -s "$t/g7.err"
+check "G: outside a git repo, nothing on stderr" $?
+
+# failure path: an empty repo has no commit to start the worktree from
+g init -q "$t/wempty" || die "setup: empty repo"
+n0=$(loglines)
+wrun "$t/wempty" worker >"$t/g8.out" 2>"$t/g8.err"
+new_has "$n0" "$(line_of "$t/wempty" worker)"
+check "G: in an empty repo, worker still starts where it was launched" $?
+is "$(grep -c '' "$t/g8.err")" -eq 1
+check "G: in an empty repo, exactly one line on stderr" $?
+head -n 1 "$t/g8.err" | grep -q '^crew:'
+check "G: that line is a crew: warning" $?
+
+# offline first launch: the same hanging fetch as in C, bounded by crew's watchdog
+g clone -q "$t/origin.git" "$t/woff" || die "setup: offline project clone"
+g -C "$t/woff" remote set-url origin ssh://crew.invalid/crew.git || die "setup: point the remote at a dead host"
+n0=$(loglines)
+s0=$(date +%s)
+# 'sleep 60 #': git appends the host and the command to GIT_SSH_COMMAND, and sleep rejects them;
+# the comment swallows them, so the fetch really hangs until crew's own watchdog stops it.
+# git's ssh probe and its sleep are orphaned by that kill and end by themselves within 60 s;
+# they hold no pipe of this script (its outputs go to files), and nothing here kills by name.
+( cd "$t/woff" && GIT_SSH_COMMAND='sleep 60 #' CREW_DIR="$t/profiles" CREW_NO_UPDATE=1 crew run worker ) >"$t/g9.out" 2>"$t/g9.err"
+s1=$(date +%s)
+is "$((s1 - s0))" -lt 10
+check "G: the offline first launch returns within 10 s" $?
+new_has "$n0" "$(line_of "$t/woff/.claude/worktrees/worker" worker)"
+check "G: the offline first launch starts worker in its worktree" $?
+is ! -s "$t/g9.err"
+check "G: the offline first launch prints nothing on stderr" $?
 
 # =============================================================================================
 if [ "$nfail" -ne 0 ]; then dump; fi
