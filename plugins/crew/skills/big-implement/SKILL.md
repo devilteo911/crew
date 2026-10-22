@@ -306,10 +306,10 @@ target branch into it for a review, is fine: `--ff-only` leaves it as it is.
 Now the whole project is on the mother branch and nobody has reviewed it: the children's
 MR/PRs merged into it without a review. Towards the target branch nothing opens without a
 passed one, so before `close` on the mother you ask the gate whether the exact tip of the
-mother branch has it:
+mother branch has it — `HEAD` now, the tip `close` will push:
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/review-gate.sh" <mother> "$(git rev-parse <mother-branch>)"
+"${CLAUDE_PLUGIN_ROOT}/scripts/review-gate.sh" <mother> "$(git rev-parse HEAD)"
 ```
 
 - **It passes** — a review already passed this exact tip, as in a run started again after
