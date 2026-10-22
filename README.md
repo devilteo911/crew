@@ -135,7 +135,7 @@ The two profiles that ship with it:
   It asks the sottoposto, never the user, and runs `/crew:close` and
   `/crew:big-implement` only when you ask for them through the sottoposto.
   When `crew run` could not start it in its worktree, it tells the sottoposto
-  and stops.
+  and stops, except in a repo with no commit yet, which has none to make.
 
 The crew talks to itself in English.
 
