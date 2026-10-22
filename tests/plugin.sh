@@ -1,7 +1,8 @@
 #!/bin/sh
 # Tests of the crew plugin's scripts: plugins/crew/scripts/tracker.sh against stubbed gh and glab, on
 # both platforms. It covers kind, check, body get and the three guards of body put, state, comments,
-# create, close, list, and the mr commands (create, list, state, checks, merge).
+# create, close, list, and the mr commands (create, list, state, checks, merge); then the Stop hook
+# goal-stop.sh, run as Claude Code runs it, on top of the same stubs.
 # Run it from anywhere: sh tests/plugin.sh
 # Every assertion prints "ok <what>" or "FAIL <what>" and the run goes on; the exit status is 1 when
 # any FAIL was printed. Nothing outside the temp dir changes: HOME and PATH are replaced, stubs stand
@@ -438,6 +439,113 @@ for K in gh glab; do
   logged "$merge_line"
   check "$K mr merge: the call is '$MR merge 9 ... $SHA ...'" $?
 done
+
+# =============================================================================================
+echo "== goal-stop.sh"
+hook="$src/plugins/crew/scripts/goal-stop.sh"
+gd=$(g -C "$t/repo" rev-parse --path-format=absolute --git-path crew) || die "setup: git path of crew"
+# issue 7 as the hook sees it, with the CRs the server keeps: Phase 2 has boxes left, or none does
+BP=$(printf '# T\r\n\r\n## Plan\r\n\r\n### Phase 1 — first\r\n\r\n- [x] one\r\n\r\n### Phase 2 — second\r\n\r\n- [ ] two\r\n\r\n- [ ] three')
+BD=$(printf '# T\r\n\r\n## Plan\r\n\r\n### Phase 1 — first\r\n\r\n- [x] one\r\n\r\n### Phase 2 — second\r\n\r\n- [x] two')
+stop() { # [hook [dir]]: rc, out and err of one run of the hook, as Claude Code starts it: the cwd as JSON on stdin
+  out=$(cd "${2:-$t}" && printf '{"cwd":"%s"}' "$t/repo" | "${1:-$hook}" 2>"$t/err")
+  rc=$?
+  err=$(cat "$t/err")
+}
+goal() { rm -rf "$gd" && mkdir -p "$gd" && echo "$1" >"$gd/goal"; } # <n>: a goal on that issue, and nothing else in the state dir
+reason() { printf '%s\n' "$out" | jq -r '.reason // empty'; }
+silent() { # <what>: the hook let the turn stop without a word on stdout
+  is "$rc,$out" = "0,"
+  check "$1: exits 0 with nothing on stdout" $?
+}
+blocked() { # <what> [text the reason must have]...: the hook blocked
+  w=$1
+  shift
+  is "$(printf '%s\n' "$out" | jq -r .decision)" = block
+  check "$w: blocks" $?
+  for needle; do
+    has_text "$(reason)" "$needle"
+    check "$w: the reason says '$needle'" $?
+  done
+}
+
+rm -rf "$gd"
+stop
+silent "no goal file"
+
+for K in gh glab; do
+  platform "$K"
+  issue "$K" 7 "$OPEN" "$BP" "$T0"
+  goal 7
+  stop
+  blocked "$K goal 7, Phase 2 unticked" "#7" "Phase 2 — second"
+done
+
+platform gh
+issue gh 7 OPEN "$BD" "$T0"
+goal 7
+printf 'x\n3\n' >"$gd/blocks"
+stop
+silent "every box ticked, clean tree"
+is ! -e "$gd/goal"
+check "every box ticked, clean tree: goal is removed" $?
+is ! -e "$gd/blocks"
+check "every box ticked, clean tree: blocks is removed" $?
+
+: >"$t/repo/dirty.txt"
+goal 7
+stop
+blocked "every box ticked, dirty tree" "uncommitted changes"
+rm "$t/repo/dirty.txt"
+
+issue gh 7 OPEN "$BP" "$T0"
+goal 7
+: >"$gd/in-flight"
+stop
+silent "in-flight with boxes unticked"
+
+goal 7
+i=1
+while [ "$i" -le 5 ]; do
+  stop
+  blocked "same state, run $i of 6"
+  i=$((i + 1))
+done
+stop
+silent "same state, run 6 of 6"
+has_text "$err" "stalled"
+check "same state, run 6 of 6: warns 'stalled'" $?
+is ! -e "$gd/blocks"
+check "same state, run 6 of 6: blocks is removed" $?
+
+rm -f "$t/fx/gh/issue-8.json"
+goal 8
+stop
+silent "goal 8, no such issue"
+has_text "$err" "cannot read issue #8"
+check "goal 8, no such issue: warns 'cannot read issue #8'" $?
+
+# the same warning for every other way the tracker cannot be read
+goal 7
+mkdir "$t/lone"
+cp "$hook" "$t/lone/"
+stop "$t/lone/goal-stop.sh"
+silent "tracker.sh missing"
+has_text "$err" "cannot read issue #7"
+check "tracker.sh missing: warns 'cannot read issue #7'" $?
+cp "$src/plugins/crew/scripts/tracker.sh" "$t/lone/"
+chmod -x "$t/lone/tracker.sh"
+stop "$t/lone/goal-stop.sh"
+silent "tracker.sh not executable"
+has_text "$err" "cannot read issue #7"
+check "tracker.sh not executable: warns 'cannot read issue #7'" $?
+stop plugins/crew/scripts/goal-stop.sh "$src"
+blocked "started by a relative path" "#7"
+g -C "$t/repo" remote set-url origin https://example.com/o/r.git || die "setup: origin example.com"
+stop
+silent "origin is neither GitHub nor GitLab"
+has_text "$err" "cannot read issue #7"
+check "origin is neither GitHub nor GitLab: warns 'cannot read issue #7'" $?
 
 # =============================================================================================
 echo "plugin: $npass ok, $nfail FAIL"

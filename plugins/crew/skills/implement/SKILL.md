@@ -7,6 +7,7 @@ hooks:
     - hooks:
         - type: command
           command: "${CLAUDE_PLUGIN_ROOT}/scripts/goal-stop.sh"
+          timeout: 60
 ---
 
 # /crew:implement
