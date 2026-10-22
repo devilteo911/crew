@@ -18,8 +18,10 @@ The approved roadmap has two outputs, at the user's choice:
   mother issue and one child per step, each written complete.
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/plan/SKILL.md` — the `plan` skill of this plugin — for how to
-write and for the size of an issue, and `${CLAUDE_PLUGIN_ROOT}/TRACKER.md` for the commands of
-the two platforms. **Read them before the first command.**
+write and for the size of an issue, and `${CLAUDE_PLUGIN_ROOT}/TRACKER.md` for the vocabulary of
+the two platforms and their traps. **Read them before the first command.** The commands are
+`scripts/tracker.sh`, the only way to the tracker; below, `tracker.sh` stands for
+`"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh"`, and the blocks write it in full.
 
 ## Usage
 
@@ -43,7 +45,7 @@ conversation. It is written after reading the sources of this session.
 
 ### 0. Which tracker, and does it answer
 
-Identical to step 0 of `plan`. Here, though, the tracker is not indispensable: it is needed to
+Identical to step 0 of `plan`: `tracker.sh check`. Here, though, the tracker is not indispensable: it is needed to
 know what is already open, and for the "issues" output. If it does not answer and
 authentication is the problem, ask the user to do it; if the user prefers to go on without it,
 proceed, declare in the roadmap that the open issues were not looked at, and the "issues"
@@ -118,7 +120,14 @@ Always, with or without research-flow:
 
 #### c. The tracker
 
-The open issues, with a high `--limit` on GitHub (`TRACKER.md` §5):
+The open issues, every page of them on both platforms:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" list | jq -r '.[] | "#\(.number) \(.title)"'
+```
+
+`list` prints an array of issues with their `body`, so the mothers and the children can be told
+apart from the same answer:
 
 - the open **mothers** — `**Type:** roadmap` at the top of the body — with the children not
   yet ticked: it is work already planned. It is not to be re-proposed: the roadmap cites it
@@ -126,7 +135,8 @@ The open issues, with a high `--limit` on GitHub (`TRACKER.md` §5):
 - the single open issues: if a step you are about to propose already has its issue, the step
   cites it instead of duplicating it.
 - **the issues the sources cite** — "in progress (#29)", "still to merge #48" — are checked on
-  the tracker one by one: a source that gives as in progress an issue already closed is an
+  the tracker one by one, with `tracker.sh state <n>`, which prints `open` or `closed`: a source
+  that gives as in progress an issue already closed is an
   inconsistency to flag, and the step that depended on it may be already unblocked.
   `registri.py check` does not see it: it checks the registers' consistency with each other,
   not with the tracker.

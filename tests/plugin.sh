@@ -2,7 +2,8 @@
 # Tests of the crew plugin's scripts: plugins/crew/scripts/tracker.sh against stubbed gh and glab, on
 # both platforms. It covers kind, check, body get and the three guards of body put, state, comments,
 # create, close, list, and the mr commands (create, list, state, checks, merge); then the Stop hook
-# goal-stop.sh, run as Claude Code runs it, on top of the same stubs.
+# goal-stop.sh, run as Claude Code runs it, on top of the same stubs; then the PreToolUse guard
+# agent-guard.sh, fed the hook inputs of the two guarded agents and of everyone else.
 # Run it from anywhere: sh tests/plugin.sh
 # Every assertion prints "ok <what>" or "FAIL <what>" and the run goes on; the exit status is 1 when
 # any FAIL was printed. Nothing outside the temp dir changes: HOME and PATH are replaced, stubs stand
@@ -546,6 +547,90 @@ stop
 silent "origin is neither GitHub nor GitLab"
 has_text "$err" "cannot read issue #7"
 check "origin is neither GitHub nor GitLab: warns 'cannot read issue #7'" $?
+
+# =============================================================================================
+echo "== agent-guard.sh"
+guard="$src/plugins/crew/scripts/agent-guard.sh"
+ask() { # <agent_type, - for none> <tool_name> <command>: rc, out and err of one run, fed the input Claude Code sends
+  msg=$(jq -nc --arg a "$1" --arg tool "$2" --arg c "$3" \
+    '{hook_event_name: "PreToolUse", tool_name: $tool, tool_input: {command: $c, description: "x"}} + (if $a == "-" then {} else {agent_type: $a} end)')
+  out=$(printf '%s' "$msg" | "$guard" 2>"$t/err")
+  rc=$?
+  err=$(cat "$t/err")
+}
+refuse() { # <agent> <command> [tool]: exit 2 and a message that names the command
+  ask "$1" "${3:-Bash}" "$2"
+  is "$rc" -eq 2
+  check "guard $1: '$2' exits 2" $?
+  has_text "$err" "crew: $1 does not run '"
+  check "guard $1: '$2' says who does not run it" $?
+}
+allow() { # <agent> <command> [tool]: exit 0 and nothing on stdout or stderr
+  ask "$1" "${3:-Bash}" "$2"
+  is "$rc,$out,$err" = "0,,"
+  check "guard $1: '$2' passes in silence" $?
+}
+trk="/abs/plugins/crew/scripts/tracker.sh"
+
+refuse crew:issue-phase "git commit -m x"
+has_text "$err" "'git commit'"
+check "guard: the message names the matched text 'git commit'" $?
+refuse crew:issue-phase "cd sub && git push"
+has_text "$err" "'git push'"
+check "guard: the message names 'git push' without the && before it" $?
+for c in "git reset --hard" "git checkout main" "git switch -c x" "echo a; git commit" "(git push)" "x | git commit" \
+  "gh issue edit 3 --body-file f" "gh   issue close 3" "gh issue comment 3 --body x" "gh pr create" "gh pr merge 9" \
+  "glab issue update 3" "glab issue close 3" "glab issue note 3 -m x" "glab mr create" "glab mr merge 9"; do
+  refuse crew:issue-phase "$c"
+done
+for c in "\"$trk\" body put 12 f" "$trk body put 12 f" "'$trk' close 12" "$trk create t f" "$trk comment add 12 f" \
+  "$trk mr create 1 a b t f" "$trk mr merge 9 abc1234" "$trk mr retarget 9 main" "cd x && \"/my dir/tracker.sh\" body put 12 f"; do
+  refuse crew:issue-phase "$c"
+done
+refuse issue-phase "git commit -m x"
+refuse crew:issue-phase "git push" Monitor
+allow crew:issue-phase "\"$trk\" body get 12 f"
+for c in "$trk view 12" "$trk mr list" "$trk comment list 12" "$trk mr state 9"; do
+  allow crew:issue-phase "$c"
+done
+for c in "grep -n 'git commit' f" "git status --short" "git log --oneline -5" "git commit-graph verify" "git diff | grep git" \
+  "gh pr list" "gh issue view 3" "glab mr list" "echo git commit" "grep -rn 'gh issue edit' skills" "ls $trk"; do
+  allow crew:issue-phase "$c"
+done
+
+for c in "git stash" "gh pr list" "gh issue create -t x" "glab issue create" "glab mr list" "git commit -m x" "$trk body put 12 f"; do
+  refuse crew:issue-writer "$c"
+done
+allow crew:issue-writer "gh issue view 3"
+allow crew:issue-writer "\"$trk\" body get 12 f"
+
+for a in - crew:issue-runner crew:other issue-runner; do
+  allow "$a" "git commit -m x"
+  allow "$a" "\"$trk\" body put 12 f"
+done
+msg=$(jq -nc '{tool_name: "Monitor", agent_type: "crew:issue-phase", tool_input: {ws: {url: "wss://x"}, description: "x"}}')
+out=$(printf '%s' "$msg" | "$guard" 2>"$t/err")
+rc=$?
+err=$(cat "$t/err")
+is "$rc,$out,$err" = "0,,"
+check "guard: a Monitor input with ws and no command passes in silence" $?
+
+# fail open: the main session must never be blocked by a guard that cannot read its input
+for bad in "" "not json" "[1]" '{"agent_type": 3, "tool_input": "x"}' '{"agent_type": "crew:issue-phase", "tool_input": "git commit"}'; do
+  out=$(printf '%s' "$bad" | "$guard" 2>"$t/err")
+  rc=$?
+  err=$(cat "$t/err")
+  is "$rc,$out,$err" = "0,,"
+  check "guard: the input [$bad] passes in silence" $?
+done
+mkdir "$t/nojq" || die "setup: nojq dir"
+ln -s "$(command -v bash)" "$t/nojq/bash" || die "setup: bash in the nojq dir"
+msg=$(jq -nc '{agent_type: "crew:issue-phase", tool_input: {command: "git commit -m x"}}')
+out=$(printf '%s' "$msg" | PATH="$t/nojq" "$guard" 2>"$t/err")
+rc=$?
+err=$(cat "$t/err")
+is "$rc,$out,$err" = "0,,"
+check "guard: without jq the call passes in silence" $?
 
 # =============================================================================================
 echo "plugin: $npass ok, $nfail FAIL"
