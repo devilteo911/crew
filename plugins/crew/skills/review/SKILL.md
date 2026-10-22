@@ -135,7 +135,10 @@ worktree would show as untracked in the main checkout, where the ciurma may be w
 ```bash
 MAIN=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
 EXCL=$(git rev-parse --path-format=absolute --git-common-dir)/info/exclude
-grep -qxF '/.claude/worktrees/' "$EXCL" 2>/dev/null || echo '/.claude/worktrees/' >>"$EXCL"
+grep -qxF '/.claude/worktrees/' "$EXCL" 2>/dev/null || {   # a last line without its newline keeps its own
+  mkdir -p "${EXCL%/*}" && { [ ! -s "$EXCL" ] || [ -z "$(tail -c 1 "$EXCL")" ] || echo >>"$EXCL"; } &&
+    echo '/.claude/worktrees/' >>"$EXCL"
+}
 WT=$MAIN/.claude/worktrees/review-<number>
 git worktree remove --force "$WT" 2>/dev/null; git worktree prune   # left over from an interrupted run
 git worktree add --detach "$WT" "$SHA"
