@@ -1,6 +1,6 @@
 ---
 name: implement
-description: "Takes an issue from the repo's tracker — GitLab or GitHub — and implements its roadmap: one subagent per phase, the checkboxes ticked on the issue as the work closes, one commit per phase. It stops at the commit of the last phase: /crew:close opens the merge request. Given the number of a /crew:big-plan mother issue, it runs the first child not yet merged. Trigger: /crew:implement, 'implement issue N', 'finish issue N', 'work on issue N'."
+description: "Takes an issue from the repo's tracker — GitLab or GitHub — and implements its roadmap: one subagent per phase, the checkboxes ticked on the issue as the work closes, one commit per phase. It stops at the commit of the last phase: /crew:review reviews it, then /crew:close opens the merge request. Given the number of a /crew:big-plan mother issue, it runs the first child not yet merged. Trigger: /crew:implement, 'implement issue N', 'finish issue N', 'work on issue N'."
 argument-hint: "<number> [--from N]"
 hooks:
   Stop:
@@ -313,24 +313,30 @@ commit with verification failing, never a commit that covers two phases.
 ## 4. Where this skill ends
 
 At the commit of the last phase, with all the boxes ticked on the issue. **You do not open the
-MR/PR here**: `/crew:close <number>` opens it, redoing the verification on the final tree
-and writing its body. Telling the user so in the delivery is part of the job — otherwise they
-are left with a ready branch and nobody to take it to its destination.
+MR/PR here**, and you do not review the work: next is `/crew:review <number>`, which re-runs the
+verification on the branch tip and writes its verdict on the issue. Only after a passed review
+does `/crew:close <number>` open the MR/PR, redoing the verification on the final tree and
+writing its body. Telling the user so in the delivery is part of the job — otherwise they are
+left with a ready branch and nobody to take it to its destination.
 
-Bring the issue's **Status:** line to `implemented — awaiting merge request` (on GitHub:
-`awaiting pull request`), so that whoever reopens the page knows where things stand without
-looking at the git log. It is the same `body get`, edit and `body put` as the ticks.
+Bring the issue's **Status:** line to `implemented — awaiting review`, so that whoever reopens
+the page knows where things stand without looking at the git log. A child on the mother branch
+keeps `implemented — awaiting merge request` (on GitHub: `awaiting pull request`), because
+`/crew:close` merges it there without a review. It is the same `body get`, edit and `body put`
+as the ticks.
 
 ## 5. Delivery
 
 A few lines: the closed phases with their commits (`git log --oneline`), the checkboxes left
 empty with the reason, the deviations written in the roadmap, the problems the subagents saw
-outside their perimeter, and how to continue: `/crew:close <number>`. Do not paste the
-issue or the diff.
+outside their perimeter, and how to continue: `/crew:review <number>`, then `/crew:close <number>`
+once the review has passed — a child on the mother branch goes straight to `/crew:close`, see
+below. Do not paste the issue or the diff.
 
 If it was a child of a big-plan, say so too: which child comes next in the mother, and that it
 starts only after the merge of this one, with `/crew:close <number> --merged` ticking the
-box on the mother — or that `/crew:big-implement <mother>` moves all the remaining
+box on the mother (the child towards the target branch gets the review before the `close` that
+opens its MR/PR, like any other issue) — or that `/crew:big-implement <mother>` moves all the remaining
 children forward without waiting for the merges. For a child on the mother branch,
 `/crew:close <number>` merges it there by itself, and there is no merge to wait for.
 

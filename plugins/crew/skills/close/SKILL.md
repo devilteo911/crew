@@ -1,6 +1,6 @@
 ---
 name: close
-description: "Takes the work of an already implemented issue to a merge request — a pull request on GitHub: checks that the roadmap is really all ticked, redoes the verification on the final tree, pushes the branch and opens the MR/PR with Closes #number. Once merged, it closes the issue and, if it is a child of a /crew:big-plan, ticks it on the mother. A child of a project that has a mother branch — the one of /crew:big-implement — goes to an MR/PR towards that branch and merges it on its own; the mother goes to an MR/PR towards the target branch, which the user merges. Trigger: /crew:close, 'open the merge request of issue N', 'close issue N'."
+description: "Takes the work of an already implemented issue to a merge request — a pull request on GitHub: checks that the roadmap is really all ticked, redoes the verification on the final tree, pushes the branch and opens the MR/PR with Closes #number. Once merged, it closes the issue and, if it is a child of a /crew:big-plan, ticks it on the mother. A child of a project that has a mother branch — the one of /crew:big-implement — goes to an MR/PR towards that branch and merges it on its own; the mother goes to an MR/PR towards the target branch, which the user merges. Towards the target branch it opens nothing without a passed /crew:review of the branch tip; a child merged into the mother branch needs none. Trigger: /crew:close, 'open the merge request of issue N', 'close issue N'."
 argument-hint: "<number> [--merged]"
 ---
 
@@ -23,6 +23,13 @@ The one exception is the child of a project that has a **mother branch** — the
 project's worksite and not the product, and this skill merges it on its own after the usual
 checks. The work reaches the target branch only with the mother's MR/PR, and the user merges
 that one.
+
+**Towards the target branch nothing opens without a passed review.** The issue must carry a
+`/crew:review` comment that passed the exact commit being pushed, and
+`${CLAUDE_PLUGIN_ROOT}/scripts/review-gate.sh` checks it, at step 1 and again right before the
+push. A review is bound to a commit: any commit after it needs a new one, even the merge of the
+base that this skill makes. The exception is the child on the mother branch, whose MR/PR goes to
+the project's worksite and not to the product: the review of the mother covers it.
 
 ## Usage
 
@@ -54,14 +61,15 @@ remedies are interactive or by hand: stop and ask the user to run the one that w
 ## 0 bis. Which case
 
 Re-read the issue from the server (`tracker.sh view <number> | jq -r .body`) and look at the top
-of the body. The case decides the **base** — the branch the MR/PR points to — and who merges it:
+of the body. The case decides the **base** — the branch the MR/PR points to —, whether a
+`/crew:review` is required before it opens, and who merges it:
 
-| case | how you recognise it | base | merge |
-|---|---|---|---|
-| **issue** | no `**Type:**` and no `**Roadmap:**` | target branch | the user |
-| **child** | `**Roadmap:** #<mother>`, and the mother branch is **not** on `origin` | target branch | the user |
-| **child on the mother branch** | `**Roadmap:** #<mother>`, and the mother branch is on `origin` | mother branch | this skill, at step 3 bis |
-| **mother** | `**Type:** roadmap`, and the mother branch is on `origin` | target branch | the user |
+| case | how you recognise it | base | review | merge |
+|---|---|---|---|---|
+| **issue** | no `**Type:**` and no `**Roadmap:**` | target branch | required | the user |
+| **child** | `**Roadmap:** #<mother>`, and the mother branch is **not** on `origin` | target branch | required | the user |
+| **child on the mother branch** | `**Roadmap:** #<mother>`, and the mother branch is on `origin` | mother branch | none | this skill, at step 3 bis |
+| **mother** | `**Type:** roadmap`, and the mother branch is on `origin` | target branch | required, of the whole mother branch against the target branch | the user |
 
 The target branch is `${user_config.default_branch}`, or what
 `git symbolic-ref --short refs/remotes/origin/HEAD | sed 's#^origin/##'` returns. The mother
@@ -75,12 +83,12 @@ A mother **without** its branch has nothing to take to an MR/PR: the children we
 into the target branch, and the mother closes by itself with the `--merged` of the last one.
 Say so and stop.
 
-Tell the user which case you recognised, before going on.
+Tell the user which case you recognised, and whether a review is required, before going on.
 
 ## 1. Is the work really finished?
 
-Three checks, before touching anything. If one fails **you stop and report it**: an MR/PR
-opened on incomplete work costs more than one not opened.
+Three checks — four, in the cases that require a review — before touching anything. If one fails
+**you stop and report it**: an MR/PR opened on incomplete work costs more than one not opened.
 
 **The roadmap is all ticked.** Re-read the issue from the server and count. The count in the
 body is the only one that holds on both platforms — `task_completion_status` exists only on
@@ -133,6 +141,19 @@ into the branch (`git merge origin/<base>`) and redo the checks. If the merge ha
 If the working tree is dirty, stop: that work is in no commit and would not end up in the
 MR/PR.
 
+**The review passed this commit.** Only in the cases that require one (step 0 bis). The issue
+must carry a passed `/crew:review` of the commit at the tip of the branch, and the gate exits 0
+only then:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/review-gate.sh" <number> "$(git rev-parse HEAD)"
+```
+
+On a refusal you stop and relay the gate's message as it is: it names `/crew:review <number>`.
+If the check above merged the base in, the tip is a new commit that nobody reviewed, and the gate
+refuses it too. This skill never reviews the work itself and never writes a review comment: the
+verdict must come from a run other than the one that opens the MR/PR.
+
 **Verification passes on the final tree.** The single commits were green one by one; here what
 counts is the result of all of them together. Run the commands that the issue lists in its
 verification phase — or `${user_config.verify_commands}` — and look at the real output, not
@@ -150,11 +171,20 @@ not open the MR/PR: you fix it with a commit on the branch, or you stop and repo
 Before the MR/PR, not after: the documentation must describe the new behaviour, not the old.
 Re-read the files that the issue's closing phase named — or those in
 `${user_config.docs_paths}` — and check them against the code as it is now. If one falls short,
-update it and commit before going on.
+update it and commit before going on. The three commits this skill can add — the base merged in
+at step 1, a fix of a red verification, and a documentation line here — have not been reviewed:
+in the cases that require a review, the gate of step 3 refuses the new tip, and the way on is
+`/crew:review <number>` on it.
 
 ## 3. Open the MR/PR
 
+In the cases that require a review, the gate runs again immediately before the push, on the commit
+about to be pushed, so before `tracker.sh mr create`: the commit pushed is then the commit
+reviewed. On a refusal nothing is pushed: stop and relay it, as at step 1.
+
 ```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/review-gate.sh" <number> "$(git rev-parse HEAD)"   # not for the child on the mother branch
+
 git push -u origin <branch>
 
 "${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" mr create <number> <branch> <base> "<the same title as the issue>" "$SCRATCH/mr.md"
@@ -351,9 +381,10 @@ child comes next. If you stopped, the reason in one line and what is needed to u
 
 ## When to really stop
 
-Stop and ask, instead of opening the MR/PR, if: there are unticked checkboxes left; the working
-tree is dirty; a verification is red and the cause is not an obvious typo; the branch is behind
-the base in a way that merging it brings conflicts to decide; the issue is already closed or
+Stop and ask, instead of opening the MR/PR, if: there are unticked checkboxes left; the review
+gate refuses, at step 1 or at step 3 — no review, changes requested, or a commit after the one
+reviewed: you relay its message and do not review in its place; the working tree is dirty; a
+verification is red and the cause is not an obvious typo; the branch is behind the base in a way that merging it brings conflicts to decide; the issue is already closed or
 already has an open MR/PR (a `tracker.sh mr list --head <branch>` that is not empty) — except,
 for the child on the mother branch, an MR/PR left open by an interrupted run, which is resumed
 from step 3 bis; a pipeline is red, or the server does not merge the child's MR/PR into the
