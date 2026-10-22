@@ -341,8 +341,9 @@ Stop and say why, instead of carrying on, if:
 
 - **step 1**: the issue is closed; a box is empty, or for the mother a child is open or its box is
   not ticked; it is a child on the mother branch, or a mother without its branch;
-- **step 2**: there is no branch; the local branch and `origin/<branch>` differ; the tree that has
-  the branch is dirty;
+- **step 2**: there is no branch; `origin/<branch>` is ahead of the local branch, or the two
+  diverged (a local branch strictly ahead is reviewed, not a stop); the tree that has the branch is
+  dirty;
 - **step 4**: a verification command cannot run on this machine, including a fresh worktree whose
   setup no source names; `git merge-base` fails with anything but 0 or 1;
 - **step 5**: the `Skill` tool cannot run `code-review`;
