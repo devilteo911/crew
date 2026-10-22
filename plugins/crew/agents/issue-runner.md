@@ -53,7 +53,9 @@ unticked phase, the MR/PR already open, the merge — instead of starting over.
    of step 2, the MR/PR of step 3 **towards the mother branch**, the merge and the closing of
    step 3 bis — the issue closed, the child's **Status:**, the box ticked on the mother with the
    **Status:** `k of M`, and you at the tip of the mother branch, freshly fetched (detached there
-   in a linked worktree, as `close` step 3 bis says).
+   in a linked worktree, as `close` step 3 bis says). No review gate, at step 1 or at step 3: a
+   child merges into the mother branch unreviewed, and step 3 has its own block without
+   `review-gate.sh`.
 
 ## What you do not do
 
