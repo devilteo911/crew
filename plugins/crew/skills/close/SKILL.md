@@ -180,14 +180,13 @@ in the cases that require a review, the gate of step 3 refuses the new tip, and 
 
 In the cases that require a review, the gate runs again immediately before the push, on the commit
 about to be pushed, so before `tracker.sh mr create`: the commit pushed is then the commit
-reviewed. On a refusal nothing is pushed: stop and relay it, as at step 1.
+reviewed. On a refusal nothing is pushed: stop and relay it, as at step 1. The `&&` keep it so
+even when the block runs as one command; for the child on the mother branch, drop the gate line.
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/review-gate.sh" <number> "$(git rev-parse HEAD)"   # not for the child on the mother branch
-
-git push -u origin <branch>
-
-"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" mr create <number> <branch> <base> "<the same title as the issue>" "$SCRATCH/mr.md"
+"${CLAUDE_PLUGIN_ROOT}/scripts/review-gate.sh" <number> "$(git rev-parse HEAD)" &&
+  git push -u origin <branch> &&
+  "${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" mr create <number> <branch> <base> "<the same title as the issue>" "$SCRATCH/mr.md"
 ```
 
 `mr create` prints the MR/PR number: read it from there. On GitHub it will not be the issue's —
