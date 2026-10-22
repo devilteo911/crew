@@ -4,7 +4,8 @@
 # create, close, list, and the mr commands (create, list, state, checks, merge); then the Stop hook
 # goal-stop.sh, run as Claude Code runs it, on top of the same stubs; then the PreToolUse guard
 # agent-guard.sh, fed the hook inputs of the two guarded agents and of everyone else; then the review
-# gate review-gate.sh, run next to a stub tracker.sh that serves the issue's comments.
+# gate review-gate.sh, run next to a stub tracker.sh that serves the issue's comments; last, a grep of
+# the skills' and agents' text for what Claude Code would substitute in it.
 # Run it from anywhere: sh tests/plugin.sh
 # Every assertion prints "ok <what>" or "FAIL <what>" and the run goes on; the exit status is 1 when
 # any FAIL was printed. Nothing outside the temp dir changes: HOME and PATH are replaced, stubs stand
@@ -735,6 +736,15 @@ printf '#!/bin/sh\necho "tracker.sh: gh issue view 12 failed" >&2\nexit 1\n' >"$
 gate
 is "$rc" -ne 0 && is "$out" = "" && is "$err" = "tracker.sh: gh issue view 12 failed"
 check "gate: a tracker.sh that exits 1 makes it exit non-zero, with tracker.sh's message unchanged" $?
+
+# =============================================================================================
+echo "== skill and agent text"
+# Claude Code replaces a dollar sign followed by a digit with the skill's argument when it loads the
+# skill, inside code blocks too: awk's \$0 in /crew:review 11 read 11. The text must hold none.
+hits=$(grep -rn '\$[0-9]' "$src/plugins/crew/skills" "$src/plugins/crew/agents")
+is -z "$hits"
+check "text: no positional parameter in the skills and the agents" $?
+[ -z "$hits" ] || printf '%s\n' "$hits" | sed 's/^/# /'
 
 # =============================================================================================
 echo "plugin: $npass ok, $nfail FAIL"

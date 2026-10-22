@@ -105,8 +105,13 @@ branch out twice: find the tree that has it with one lookup, wherever you are.
 ```bash
 git fetch origin
 SHA=$(git rev-parse --verify -q "refs/heads/<branch>" || git rev-parse --verify -q "refs/remotes/origin/<branch>")
-WT=$(git worktree list --porcelain | awk -v ref="refs/heads/<branch>" '/^worktree /{p = substr($0, 10)} $0 == "branch " ref {print p; exit}')
+WT=$(git worktree list --porcelain | while read -r k v; do
+  case $k in worktree) p=$v ;; branch) [ "$v" != "refs/heads/<branch>" ] || { echo "$p"; break; } ;; esac
+done)
 ```
+
+No positional parameter — a dollar sign followed by a digit — goes in these commands, not even
+inside awk: Claude Code replaces it with the skill's argument when it loads the skill.
 
 Stop if:
 
@@ -128,7 +133,7 @@ Claude Code prompts on every write. First make sure `<git-common-dir>/info/exclu
 worktree would show as untracked in the main checkout, where the ciurma may be working.
 
 ```bash
-MAIN=$(git worktree list --porcelain | awk '/^worktree /{print substr($0, 10); exit}')
+MAIN=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
 EXCL=$(git rev-parse --path-format=absolute --git-common-dir)/info/exclude
 grep -qxF '/.claude/worktrees/' "$EXCL" 2>/dev/null || echo '/.claude/worktrees/' >>"$EXCL"
 WT=$MAIN/.claude/worktrees/review-<number>
