@@ -23,8 +23,9 @@ command -v jq >/dev/null 2>&1 || exit 0
 input=$(cat)
 agent=$(jq -r '.agent_type // empty' <<<"$input" 2>/dev/null) || exit 0
 
-# grep -E, POSIX only, one line at a time: a command starts at the start of a line or after ; & | ( or `
-start='(^|[;&|(`])[[:space:]]*'
+# grep -E, POSIX only, one line at a time: a command starts at the start of a line or after ; & | ( or `,
+# and after any of the reserved words and braces that may stand before it there (`if x; then git push`)
+start='(^|[;&|(`])[[:space:]]*((if|then|do|else|elif|while|until|time|!|\{)[[:space:]]+)*'
 end='([[:space:]]|$|[;&|)])'
 w='[[:space:]]+'
 tracker="[^\"']*tracker\\.sh[\"']?"
@@ -44,6 +45,6 @@ cmd=$(jq -r '.tool_input.command // empty' <<<"$input" 2>/dev/null) || exit 0
 [ -n "$cmd" ] || exit 0
 hit=$(printf '%s\n' "$cmd" | grep -oE -e "$start($pattern)$end" | head -n 1)
 [ -n "$hit" ] || exit 0
-hit=$(sed -E 's/^[;&|(`[:space:]]+//; s/[^[:alnum:]]+$//' <<<"$hit")
+hit=$(sed -E "s/^$start//; s/[^[:alnum:]]+\$//" <<<"$hit")
 echo "crew: $agent does not run '$hit': the orchestrator commits and writes to the tracker, say what is left in your report" >&2
 exit 2

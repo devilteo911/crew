@@ -578,6 +578,14 @@ check "guard: the message names the matched text 'git commit'" $?
 refuse crew:issue-phase "cd sub && git push"
 has_text "$err" "'git push'"
 check "guard: the message names 'git push' without the && before it" $?
+refuse crew:issue-phase "{ git push; }"
+has_text "$err" "'git push'"
+check "guard: the message names 'git push' without the brace before it" $?
+for c in "if true; then git commit -m a; fi" "for f in a; do git push; done" "if x; then :; else git push; fi" \
+  "if x; then :; elif git push; then :; fi" "if git push; then :; fi" "while git push; do :; done" "! git commit" \
+  "time git push" "cd x && { git commit -m a; }"; do
+  refuse crew:issue-phase "$c"
+done
 for c in "git reset --hard" "git checkout main" "git switch -c x" "echo a; git commit" "(git push)" "x | git commit" \
   "gh issue edit 3 --body-file f" "gh   issue close 3" "gh issue comment 3 --body x" "gh pr create" "gh pr merge 9" \
   "glab issue update 3" "glab issue close 3" "glab issue note 3 -m x" "glab mr create" "glab mr merge 9"; do
@@ -594,7 +602,7 @@ for c in "$trk view 12" "$trk mr list" "$trk comment list 12" "$trk mr state 9";
   allow crew:issue-phase "$c"
 done
 for c in "grep -n 'git commit' f" "git status --short" "git log --oneline -5" "git commit-graph verify" "git diff | grep git" \
-  "gh pr list" "gh issue view 3" "glab mr list" "echo git commit" "grep -rn 'gh issue edit' skills" "ls $trk"; do
+  "gh pr list" "gh issue view 3" "glab mr list" "echo git commit" "echo then git commit" "echo do git push" "grep -rn 'gh issue edit' skills" "ls $trk"; do
   allow crew:issue-phase "$c"
 done
 
