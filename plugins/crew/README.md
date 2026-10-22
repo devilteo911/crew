@@ -20,8 +20,10 @@ out of scope.
 | `/crew:close` | verifies the final tree, opens the MR/PR, and once merged closes the issue and ticks it on the mother; towards the target branch it opens nothing without a passed review of the exact commit; a child of a project with a mother branch is merged there on its own |
 
 Plus three subagents: `crew:issue-phase`, which runs a single phase on sonnet (`model: sonnet`
-in its frontmatter, whatever model the session that launches it runs on) and can neither commit
-nor touch the issue — the orchestrator does that, after checking the real output —;
+in its frontmatter, whatever model the session that launches it runs on, unless the Agent call
+passes a `model` or `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1` sets `CLAUDE_CODE_SUBAGENT_MODEL`) and
+can neither commit nor touch the issue — the orchestrator does that, after checking the real
+output —;
 `crew:issue-runner`, which for `big-implement` takes a child from its branch to the merge
 into the mother branch, orchestrating its phases with one `issue-phase` each, so the main
 session's context stays the project's and does not fill up with the phases of every child; and
