@@ -60,15 +60,17 @@ own merge request — pull request on GitHub:
 
 ```
 /crew:implement <child>         # or the number of this issue: takes the first open child
+/crew:review <child>            # reviews the branch tip; close refuses without a passed one
 /crew:close <child>             # opens the child's merge request
 /crew:close <child> --merged    # once merged: closes the child and ticks it here
 ```
 
 Or all at once, without waiting for the merges, with `/crew:big-implement <this
 issue>`: this issue has its own branch, each child is born from there and goes back in with a
-merge request that is merged automatically after the checks of `/crew:close`; at the end
-the merge request of this issue carries the whole project into the target branch, and only
-whoever approves it merges it. Once merged, `/crew:close <this issue> --merged`.
+merge request that is merged automatically after the checks of `/crew:close`; at the end,
+after `/crew:review <this issue>`, the merge request of this issue carries the whole project into
+the target branch, and only whoever approves it merges it. Once merged,
+`/crew:close <this issue> --merged`.
 
 A box of this issue is ticked **when the child is merged** — into the target branch, or into
 this issue's branch — not when it is implemented. The next child starts from there, with the work

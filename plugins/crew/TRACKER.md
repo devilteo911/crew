@@ -1,10 +1,11 @@
 # TRACKER — GitLab or GitHub, and what changes
 
 The skills of this plugin — `/crew:roadmap`, `/crew:plan`, `/crew:big-plan`,
-`/crew:implement`, `/crew:big-implement`, `/crew:close` — work on a tracker that can be **GitLab** (`glab`) or **GitHub**
-(`gh`). The plan, the roadmap, the writing rules and the way boxes get ticked do not
-change: the command and two words do. This file is the single reference for the **vocabulary**
-and the **traps**, and the skills cite it instead of repeating themselves.
+`/crew:implement`, `/crew:big-implement`, `/crew:review`, `/crew:close` — work on a tracker that
+can be **GitLab** (`glab`) or **GitHub** (`gh`). The plan, the roadmap, the writing rules and the
+way boxes get ticked do not change: the command and two words do. This file is the single
+reference for the **vocabulary** and the **traps**, and the skills cite it instead of repeating
+themselves.
 
 The commands live in `scripts/tracker.sh`, the only caller of `gh` and `glab`. It deduces the
 platform from the remote, hides the differences below, and refuses the calls that would damage
@@ -63,6 +64,25 @@ the slash.
 On GitHub, issues and pull requests **share the same sequence of numbers**: the PR opened for
 issue #12 will be #13 or #40, never #12. Do not assume they coincide and do not construct
 the PR number: read it from the output of `tracker.sh mr create`.
+
+**The Status line.** `- **Status:**` at the top of the issue is the line every skill rewrites, and
+this table is the only place that lists all its values:
+
+| written by | when | value |
+|---|---|---|
+| `plan`, `big-plan` | the issue is opened | `to do` |
+| `implement` | a phase is ticked | `in progress — phase N of M` |
+| `implement` | the last phase is committed | `implemented — awaiting review`; a child on the mother branch: `implemented — awaiting merge request` (GitHub: `awaiting pull request`) |
+| `review` | while it runs | `reviewing` |
+| `review` | its verdict | `reviewed — <sha7>`, `changes requested — <sha7>` |
+| `close` | the MR/PR is open | `in review — !<MR>` (GitLab), `in review — #<PR>` (GitHub) |
+| `close` | after the merge | `closed — merged on DD/MM/YYYY`; a child on the mother branch: `closed — merged into <mother-branch> on DD/MM/YYYY` |
+| `big-plan`, `close`, `big-implement`, `review` | the mother | `to do`, `in progress — k of M issues merged` (`… into <mother-branch>`), then `reviewing`, `reviewed — <sha7>` or `changes requested — <sha7>` and `in review — !<MR>` / `#<PR>` when its branch is reviewed and its MR/PR opened, `closed — completed on DD/MM/YYYY` |
+
+The verdict of a review lives in its comment (§6), and the Status only displays it: the line is
+rewritten by every skill and by hand, while a comment is appended and stays in the history.
+`reviewing` is the review at work; `in review — !<MR>` / `#<PR>` is the open MR/PR, and only
+`close` writes it.
 
 ## 4. The commands
 
@@ -212,6 +232,7 @@ only by `/crew:close --merged`, and the count that matters stays the one in the 
 | sections | `## Goal`, `## Context`, `## Plan`, `## Out of scope`, `## How to update this roadmap` |
 | mother sections | `## Architecture`, `## Decisions`, `## Issues`, `## How to proceed` |
 | phases | `### Phase N — <title>`, `**Done when:**` |
+| review comment, first line | `<!-- crew:review verdict=<passed\|changes-requested> sha=<full SHA> -->`, written by `/crew:review` and read by `scripts/review-gate.sh` |
 | arguments | `close <n> --merged`, `plan check <n>`, `plan revise <n>`, `implement <n> --from N` |
 
 The skills write and read only these. An issue written with other markers is not recognised: rewrite it with these by hand.

@@ -80,7 +80,7 @@ and the Figma first if the project has one configured — are described in `SKIL
 - [ ] commit on the issue's branch
 
 [The MR/PR does not go among the checkboxes: `/crew:close <number>` opens it after the last
-phase, and it is not merged — the user asks for the merge.]
+phase and a passed `/crew:review <number>`, and it is not merged — the user asks for the merge.]
 
 ## How to update this roadmap
 
@@ -112,9 +112,11 @@ sed -i 's/\r$//' roadmap.md
 gh issue edit <number> --body-file roadmap.md
 ```
 
-When the work is done: all the boxes ticked, then `/crew:close <number>` opens the merge
-request — the pull request on GitHub — and sets **Status:** to `in review — !<MR number>` on
-GitLab, `in review — #<PR number>` on GitHub. After the merge,
+When the work is done: all the boxes ticked, then `/crew:review <number>` reviews the branch tip
+and writes its verdict on the issue. While it runs **Status:** is `reviewing`, then
+`reviewed — <sha7>` or `changes requested — <sha7>`. Only after a passed review does
+`/crew:close <number>` open the merge request — the pull request on GitHub — and set **Status:**
+to `in review — !<MR number>` on GitLab, `in review — #<PR number>` on GitHub. After the merge,
 `glab issue close <number>` or `gh issue close <number>`, and **Status:** becomes
 `closed — merged on DD/MM/YYYY`. On GitHub the issue may have already closed by itself: the PR carries
 `Closes #<number>` and the merge closes it.
