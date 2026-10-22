@@ -42,9 +42,11 @@ case "\$*" in
 esac
 exit 0
 EOF
-# term: used through TERMINAL, drops its -e and runs the rest (SHELL=/bin/true ends it at once)
+# term: used through TERMINAL, drops its -e and runs the rest (SHELL=/bin/true ends it at once). It and
+# osascript drop CREW_DIR, as Terminal.app does: the command bin/crew hands over must carry it
 cat >"$t/bin/term" <<'EOF'
 #!/bin/sh
+unset CREW_DIR
 shift
 exec "$@"
 EOF
@@ -57,6 +59,7 @@ EOF
 # osascript: only macOS reaches it; runs the command bin/crew hands to Terminal.app, here
 cat >"$t/bin/osascript" <<'EOF'
 #!/bin/sh
+unset CREW_DIR
 s=${2#*do script \"}
 s=${s%\"}
 sh -c "$s" </dev/null >/dev/null 2>&1 &

@@ -9,9 +9,8 @@ self=$(readlink "$0" || echo "$0")   # ~/.local/bin/crew is a symlink (install.s
 root=$(CDPATH='' cd -- "$(dirname -- "$self")/.." && pwd)
 self="$root/bin/crew"
 crewdir="${CREW_DIR:-$HOME/.claude/crew}"
-# absolute, and exported: crew run may cd into a worktree before its exec, and each terminal cds into the project first
+# absolute: crew run may cd into a worktree before its exec, and each terminal cds into the project first
 case $crewdir in /*) ;; *) crewdir="$PWD/$crewdir" ;; esac
-[ -z "${CREW_DIR:-}" ] || export CREW_DIR="$crewdir"
 
 # git fetch in <dir>, bounded to 5 s (macOS has no timeout(1)); the fetch's status, non-zero when killed.
 # The group keeps the shell's own "Terminated" for the killed fetch off stderr.
@@ -129,7 +128,8 @@ wait=
 for f in "$crewdir"/*.md; do
   [ -e "$f" ] || { echo "crew: no profiles in $crewdir" >&2; exit 1; }
   n=$(basename "$f" .md)
-  cmd="cd '$d' && ${wait}CREW_NO_UPDATE=1 '$self' run '$n'"
+  # CREW_DIR in the command: Terminal.app's do script does not pass this process's environment on
+  cmd="cd '$d' && ${wait}CREW_DIR='$crewdir' CREW_NO_UPDATE=1 '$self' run '$n'"
   case "$(uname -s)" in
     Darwin)
       osascript -e "tell app \"Terminal\" to do script \"$cmd\"" >/dev/null
