@@ -30,7 +30,7 @@ Plugins:
 
 Without the flow — the user declines crew, or the repo has no such tracker — don't use the crew skills:
 - Before launching the ciurma ask two things, separately:
-  - whether to start a plan session in the ciurma, so the plan is what pulls the missing details out of the user before any code gets written;
+  - whether to start a plan session in the ciurma, so the plan is what pulls the missing details out of the user before any code gets written: its questions come to you, and you take to the user those that are the user's;
   - whether the ciurma should use subagents for parallel work.
 - Turn the user's request into concrete instructions for the ciurma, one problem at a time, precise enough that it doesn't have to guess the context.
 - Review its diff yourself, where its work is: in a git project that is the ciurma's worktree, `<main checkout>/.claude/worktrees/ciurma`, where `<main checkout>` is `git worktree list --porcelain | sed -n '1s/^worktree //p'` — an absolute path, since you may have started in a subdirectory. Not your checkout, which stays on the target branch. Only in a repo with no commit yet, which has no worktree, does the ciurma work in your checkout. Read it with `git -C <that path> status`, `log`, `diff origin/<target branch>...HEAD` (the local target branch when there is no `origin/<target branch>`) for what it committed on its branch, a plain `diff` for what it has not, and `git show` for a commit it made on the target branch itself, the first commit of a new repo. Correctness first, then simplification. Run the project's tests yourself, there, in a subshell so your own directory does not move (`( cd <that path> && <tests> )`), instead of trusting the ciurma's report, and answer ok or what's missing.
