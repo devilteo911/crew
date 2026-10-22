@@ -32,8 +32,10 @@ branch>` there), because git checks a branch out in one place only.
 
 A `prompts/ciurma.worktree` created by hand in the managed clone
 (`~/.local/share/crew`) has to be deleted: 0.5.0 ships that file, and while
-the copy is there the self-update fails at every launch with git's
-"untracked working tree files would be overwritten by merge".
+the copy is there the self-update fails at every launch, and the launcher
+prints `crew: could not update <home>/.local/share/crew (offline, diverged or
+local changes), starting 0.4.0 as is`: the merge refuses to overwrite the
+untracked file.
 
 The two symlinks:
 
