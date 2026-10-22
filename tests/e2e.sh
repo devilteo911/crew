@@ -469,6 +469,12 @@ wrun "$t/wproj/local-only" worker >"$t/g4.out" 2>"$t/g4.err"
 new_has "$n0" "$(line_of "$wt" worker)"
 check "G: from an untracked subdirectory, worker starts at the worktree's root" $?
 
+# a relative CREW_DIR still names the profile once crew run has moved into the worktree
+n0=$(loglines)
+( cd "$t/wproj" && CREW_DIR=../profiles CREW_NO_UPDATE=1 crew run worker ) >"$t/g4b.out" 2>"$t/g4b.err"
+new_has "$n0" "$wt -n worker --append-system-prompt-file $t/wproj/../profiles/worker.md"
+check "G: a relative CREW_DIR becomes an absolute profile path" $?
+
 n0=$(loglines)
 wrun "$t/wproj" lead >"$t/g5.out" 2>"$t/g5.err"
 new_has "$n0" "$(line_of "$t/wproj" lead)"
@@ -482,6 +488,12 @@ new_has "$n0" "$(line_of "$t/wproj" lead)"
 check "G: the launcher starts lead in the project" $?
 new_has "$n0" "$(line_of "$wt" worker)"
 check "G: the launcher starts worker in its worktree" $?
+# the same with a CREW_DIR relative to where crew was typed, not to the project the terminals cd into
+n0=$(loglines)
+( cd "$t" && CREW_DIR=profiles CREW_NO_UPDATE=1 crew "$t/wproj" ) >"$t/g6b.out" 2>"$t/g6b.err"
+wait_sessions "$n0" 2
+new_has "$n0" "$(line_of "$t/wproj" lead)" && new_has "$n0" "$(line_of "$wt" worker)"
+check "G: the launcher resolves a relative CREW_DIR where crew was typed" $?
 
 # not a git repo: as before (GIT_CEILING_DIRECTORIES keeps $t/proj out of any repo)
 n0=$(loglines)
