@@ -457,6 +457,12 @@ n0=$(loglines)
 wrun "$t/wproj/prompts" worker >"$t/g3.out" 2>"$t/g3.err"
 new_has "$n0" "$(line_of "$wt/prompts" worker)"
 check "G: from a tracked subdirectory, worker starts in the same one of its worktree" $?
+# an exported CDPATH with the same subdirectory must not take the session out of its worktree
+mkdir -p "$t/decoy/prompts" || die "setup: CDPATH decoy"
+n0=$(loglines)
+( export CDPATH="$t/decoy"; wrun "$t/wproj/prompts" worker ) >"$t/g3b.out" 2>"$t/g3b.err"
+new_has "$n0" "$(line_of "$wt/prompts" worker)" && is ! -s "$t/g3b.out"
+check "G: under an exported CDPATH, worker still starts in the subdirectory of its worktree" $?
 mkdir "$t/wproj/local-only" || die "setup: untracked subdirectory"
 n0=$(loglines)
 wrun "$t/wproj/local-only" worker >"$t/g4.out" 2>"$t/g4.err"
