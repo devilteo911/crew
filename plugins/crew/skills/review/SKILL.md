@@ -144,8 +144,8 @@ grep -qxF '/.claude/worktrees/' "$EXCL" 2>/dev/null || {   # a last line without
     echo '/.claude/worktrees/' >>"$EXCL"
 }
 WT=$MAIN/.claude/worktrees/review-<number>
-git worktree remove --force "$WT" 2>/dev/null; git worktree prune   # left over from an interrupted run
-git worktree add --detach "$WT" "$SHA"
+rm -rf "$WT"                                # left over from an interrupted run
+git worktree add -f --detach "$WT" "$SHA"   # -f: that one may still be registered
 # … step 8: git worktree remove --force "$WT"
 ```
 
