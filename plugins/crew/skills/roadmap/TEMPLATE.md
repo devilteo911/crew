@@ -1,6 +1,6 @@
 # TEMPLATE — the ROADMAP.md file
 
-The file that `/issue-flow:roadmap` writes in the repo root when the user chooses to save the
+The file that `/crew:roadmap` writes in the repo root when the user chooses to save the
 roadmap instead of opening the issues. It is rewritten in full every time: it describes today's
 next steps, and the previous versions are in git's history. It is written in English, whatever
 language the chat is in.
@@ -12,7 +12,7 @@ writes and is not to be copied. The sections marked optional are omitted if they
 
 # Roadmap
 
-**Updated on DD-MM-YYYY** by `/issue-flow:roadmap`[ — focus: <focus>, if there was one].
+**Updated on DD-MM-YYYY** by `/crew:roadmap`[ — focus: <focus>, if there was one].
 
 ## Where we are
 
@@ -26,7 +26,7 @@ looked at (or "tracker not consulted").]
 ## Next steps
 
 [In execution order. Each step has the size of an issue, and can be opened with
-`/issue-flow:plan` by copying its title and its description.]
+`/crew:plan` by copying its title and its description.]
 
 ### 1. [title: what changes for whoever uses the product]
 

@@ -1,7 +1,7 @@
 # TRACKER — GitLab or GitHub, and what changes
 
-The skills of this plugin — `/issue-flow:roadmap`, `/issue-flow:plan`, `/issue-flow:big-plan`,
-`/issue-flow:implement`, `/issue-flow:big-implement`, `/issue-flow:close` — work on a tracker that can be **GitLab** (`glab`) or **GitHub**
+The skills of this plugin — `/crew:roadmap`, `/crew:plan`, `/crew:big-plan`,
+`/crew:implement`, `/crew:big-implement`, `/crew:close` — work on a tracker that can be **GitLab** (`glab`) or **GitHub**
 (`gh`). The plan, the roadmap, the writing rules and the way boxes get ticked do not
 change: the command and two words do. This file is the single reference, and the
 skills cite it instead of repeating themselves.
@@ -115,7 +115,7 @@ there.
 the issue is made **only** with `Closes #<number>` as the first line of the body — on GitHub
 it closes the issue at merge if the PR targets the repo's default branch. An MR/PR that
 targets the mother's branch, on both platforms, closes nothing: the child is closed by
-`/issue-flow:close` right after the merge. After the merge, the branch is deleted by hand
+`/crew:close` right after the merge. After the merge, the branch is deleted by hand
 (`git push origin --delete <branch>`) or by the repo's "Automatically delete head branches"
 setting: it is not these skills' job.
 
@@ -127,29 +127,29 @@ merged, GitHub closed it by itself. Before closing, look at the state: if it is 
 `CLOSED`, what is left is to bring the **Status:** line in the body up to date. Closing an
 issue that is already closed is not an error, but telling the user that you closed it is.
 
-**A checkbox that cites an issue shows it live.** In the mother of `/issue-flow:big-plan`,
+**A checkbox that cites an issue shows it live.** In the mother of `/crew:big-plan`,
 the lines `- [ ] #13 title` are task lists like any other — they are counted with the same
 `grep`s — and on top of that both platforms render `#13` as a link with the title and state
 of the issue. The state shown, however, is the issue's, not the tick: the box is flipped
-only by `/issue-flow:close --merged`, and the count that matters stays the one in the body.
+only by `/crew:close --merged`, and the count that matters stays the one in the body.
 
 **`--yes` belongs to `glab`.** `gh` does not have it and does not need it: when you pass
 `--title` and `--body-file` (and `--head` for the PR, with the branch already pushed) it asks
 nothing.
 
-## 6. Markers and arguments — English, 1.x Italian still read
+## 6. Markers and arguments
 
-| | 2.x writes | 1.x form, still read / accepted |
-|---|---|---|
-| header | `- **Status:**` | `- **Stato:**` |
-| header (mother) | `- **Type:** roadmap` | `- **Tipo:** roadmap` |
-| header | `- **Planned branch:**` | `- **Branch previsto:**` |
-| header (child) | `- **Depends on:** #<k>` | `- **Dipende da:** #<k>` |
-| header (child) | `- **Roadmap:** #<n>` | same |
-| mother's child line | `· depends on #<k>` | `· dipende da #<k>` |
-| sections | `## Goal`, `## Context`, `## Plan`, `## Out of scope`, `## How to update this roadmap` | `## Obiettivo`, `## Contesto`, `## Piano`, `## Fuori perimetro`, `## Come si aggiorna questa roadmap` |
-| mother sections | `## Architecture`, `## Decisions`, `## Issues`, `## How to proceed` | `## Architettura`, `## Decisioni`, `## Issue`, `## Come si avanza` |
-| phases | `### Phase N — <title>`, `**Done when:**` | `### Fase N — <titolo>`, `**Fatto quando:**` |
-| arguments | `close <n> --merged`, `plan check <n>`, `plan revise <n>`, `implement <n> --from N` | `--chiudi`, `spunta`, `rivedi`, `--da N` |
+| | Marker |
+|---|---|
+| header | `- **Status:**` |
+| header (mother) | `- **Type:** roadmap` |
+| header | `- **Planned branch:**` |
+| header (child) | `- **Depends on:** #<k>` |
+| header (child) | `- **Roadmap:** #<n>` |
+| mother's child line | `· depends on #<k>` |
+| sections | `## Goal`, `## Context`, `## Plan`, `## Out of scope`, `## How to update this roadmap` |
+| mother sections | `## Architecture`, `## Decisions`, `## Issues`, `## How to proceed` |
+| phases | `### Phase N — <title>`, `**Done when:**` |
+| arguments | `close <n> --merged`, `plan check <n>`, `plan revise <n>`, `implement <n> --from N` |
 
-The rule: read either form, write only the English one. On a 1.x issue, rewrite the value on the status line that is already there, and never add a second one.
+The skills write and read only these. An issue written with other markers is not recognised: rewrite it with these by hand.

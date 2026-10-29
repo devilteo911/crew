@@ -1,6 +1,6 @@
 ---
 name: implement
-description: "Takes an issue from the repo's tracker — GitLab or GitHub — and implements its roadmap: one subagent per phase, the checkboxes ticked on the issue as the work closes, one commit per phase. It stops at the commit of the last phase: /issue-flow:close opens the merge request. Given the number of a /issue-flow:big-plan mother issue, it runs the first child not yet merged. Trigger: /issue-flow:implement, 'implement issue N', 'finish issue N', 'work on issue N'."
+description: "Takes an issue from the repo's tracker — GitLab or GitHub — and implements its roadmap: one subagent per phase, the checkboxes ticked on the issue as the work closes, one commit per phase. It stops at the commit of the last phase: /crew:close opens the merge request. Given the number of a /crew:big-plan mother issue, it runs the first child not yet merged. Trigger: /crew:implement, 'implement issue N', 'finish issue N', 'work on issue N'."
 argument-hint: "<number> [--from N]"
 hooks:
   Stop:
@@ -9,23 +9,22 @@ hooks:
           command: "${CLAUDE_PLUGIN_ROOT}/scripts/goal-stop.sh"
 ---
 
-# /issue-flow:implement
+# /crew:implement
 
-`/issue-flow:plan` writes the work instruction, this one carries it out. Everything that is
+`/crew:plan` writes the work instruction, this one carries it out. Everything that is
 needed is in the issue: plan, context, roadmap. No work is added that the issue does not
 foresee, and no work it foresees is skipped.
 
 ## Usage
 
 ```
-/issue-flow:implement <number>          # runs the issue from the first unchecked phase
-/issue-flow:implement <mother>          # big-plan mother issue: runs the first open child
-/issue-flow:implement <number> --from 3 # resumes from phase 3, ignoring the checkboxes
-/issue-flow:implement                   # infers the number from the current branch
+/crew:implement <number>          # runs the issue from the first unchecked phase
+/crew:implement <mother>          # big-plan mother issue: runs the first open child
+/crew:implement <number> --from 3 # resumes from phase 3, ignoring the checkboxes
+/crew:implement                   # infers the number from the current branch
 ```
 
-`--from N` resumes at `### Phase N` (`### Fase N` on a 1.x issue). The 1.x argument `--da N` is
-still accepted (`TRACKER.md` §6).
+`--from N` resumes at `### Phase N`.
 
 ## You are the orchestrator, and you stay one
 
@@ -36,8 +35,8 @@ The reason is context. Each phase starts from a clean subagent that reads only t
 needs, while you keep the overall view — where the roadmap stands, what the previous phase
 decided, what is missing — without filling up on the details of every single file.
 
-With `/issue-flow:big-implement` this same cycle goes down one level: for each child, an
-`issue-flow:issue-runner` subagent runs it, reads this skill as a reference and leaves the goal
+With `/crew:big-implement` this same cycle goes down one level: for each child, an
+`crew:issue-runner` subagent runs it, reads this skill as a reference and leaves the goal
 to the main session.
 
 ## You work in goal mode
@@ -51,7 +50,7 @@ resume from.
 The hook reads its state from a folder inside `.git`, which never ends up in a commit:
 
 ```bash
-GOAL_DIR=$(git rev-parse --path-format=absolute --git-path issue-flow)
+GOAL_DIR=$(git rev-parse --path-format=absolute --git-path crew)
 ```
 
 - `$GOAL_DIR/goal` — the number of the issue being worked on. You write it at step 2; when the
@@ -99,36 +98,34 @@ jq -r '.body'  "$SCRATCH/issue.json" | sed 's/\r$//' > "$SCRATCH/roadmap.md"
 Check that `roadmap.md` is not empty before going on: if it is, you picked the other
 platform's field.
 
-If the top of the body has `**Type:** roadmap` or `**Tipo:** roadmap`, it is the mother of a
-`/issue-flow:big-plan` and it is not implemented: go to step 1 bis. If it has
+If the top of the body has `**Type:** roadmap`, it is the mother of a
+`/crew:big-plan` and it is not implemented: go to step 1 bis. If it has
 `**Roadmap:** #<mother>`, it is a child: everything that follows applies, plus step 1 ter
-before the branch. Both spellings are in `TRACKER.md` §6.
+before the branch.
 
-Read all of it, not just the Plan: **Goal**, **Context** and **Out of scope** — on a 1.x issue
-**Obiettivo**, **Contesto** and **Fuori perimetro** — are what keeps the subagents from
-reinventing decisions already made, and they must be passed to them.
+Read all of it, not just the Plan: **Goal**, **Context** and **Out of scope** are what keeps
+the subagents from reinventing decisions already made, and they must be passed to them.
 
 Then work out, and tell the user before starting:
 
 - the working branch, `${user_config.branch_prefix}<number>` — with the default `issue-`,
   issue #12 is worked on `issue-12`;
-- the list of phases (the `###` inside `## Plan`, or `## Piano` on a 1.x issue) with how many
+- the list of phases (the `###` inside `## Plan`) with how many
   checkboxes each has and how many are already ticked, and which phase you resume from;
 - if the issue has no phases with checkboxes, **stop**: it is not an executable issue. Report
-  it and propose `/issue-flow:plan revise <number>`.
+  it and propose `/crew:plan revise <number>`.
 
 ## 1 bis. The mother: which child is next
 
-Children are run **one at a time, in order**. In the mother's **Issues** section (`## Issues`,
-or `## Issue` on a 1.x issue), the first unchecked `- [ ] #<n>` line is the child to run:
+Children are run **one at a time, in order**. In the mother's **Issues** section (`## Issues`),
+the first unchecked `- [ ] #<n>` line is the child to run:
 
 ```bash
 grep -n '^[[:space:]]*- \[ \] #[0-9]' "$SCRATCH/roadmap.md" | head -1
 ```
 
 Before taking it, check that the children it depends on — the `· depends on #<k>` line in the
-mother (`· dipende da #<k>` on a 1.x issue), `**Depends on:**` in the child
-(`**Dipende da:**`) — are **closed** on the tracker
+mother, `**Depends on:**` in the child — are **closed** on the tracker
 (`glab issue view <k> --output json --jq '.state'` → `closed`, `gh issue view <k> --json state
 --jq '.state'` → `CLOSED`). A child with a dependency still open is not started: tell the user
 and say which one has to be closed first — usually an MR/PR waiting to be merged.
@@ -142,7 +139,7 @@ child's number. **Never two children in the same run**: each has its own branch 
 MR/PR, and the next one starts from the code that this one will have merged.
 
 To move all the children forward in one go, without waiting for the merges, there is
-`/issue-flow:big-implement <mother>`: same run, one child at a time, on the mother branch —
+`/crew:big-implement <mother>`: same run, one child at a time, on the mother branch —
 each child enters it on its own, and only the mother's MR/PR reaches the target branch.
 
 ## 1 ter. Does the child still hold?
@@ -158,7 +155,7 @@ Before delegating the first phase, check:
 
 If something does not hold in a substantial way — a file that does not exist, an interface
 created with a different shape, a decision the sibling changed along the way — **stop** and
-propose `/issue-flow:plan revise <number>`. Lines that only moved by a few positions are not a
+propose `/crew:plan revise <number>`. Lines that only moved by a few positions are not a
 reason to stop: the subagent re-verifies them anyway. The right remedy is to fix the issue
 before the code.
 
@@ -191,7 +188,7 @@ already-merged siblings are, freshly updated — the `git pull --ff-only` above:
 
 - the **mother branch**, `${user_config.branch_prefix}<mother>`, if it exists on `origin`
   (`git ls-remote --exit-code --heads origin <mother-branch>`): the project is run by
-  `/issue-flow:big-implement`, and the siblings merge there;
+  `/crew:big-implement`, and the siblings merge there;
 - the target branch otherwise.
 
 Never from the branch of a sibling that is not merged yet.
@@ -202,13 +199,12 @@ For each incomplete phase, in order. Four steps, always the same.
 
 ### Delegate
 
-One call of the `Agent` tool with `subagent_type: "issue-flow:issue-phase"`. The subagent has
+One call of the `Agent` tool with `subagent_type: "crew:issue-phase"`. The subagent has
 not seen the conversation and has not read the issue: **what you do not write to it does not
 exist**. The prompt must contain, in full and not summarised:
 
 - number and title of the issue, and the branch you are working on;
-- the **Goal**, **Context** and **Out of scope** sections of the issue (**Obiettivo**,
-  **Contesto** and **Fuori perimetro** on a 1.x issue);
+- the **Goal**, **Context** and **Out of scope** sections of the issue;
 - the phase number and its **full text**: lead-in, list of files, all the checkboxes with the
   code snippets under them, the "Done when" line;
 - what the previous phases left behind, if they deviated from the written plan.
@@ -260,9 +256,6 @@ glab issue update <number> --description-file "$SCRATCH/roadmap.md"   # GitLab
 gh   issue edit   <number> --body-file        "$SCRATCH/roadmap.md"   # GitHub
 ```
 
-On a 1.x issue, write the English value on the status line that is already there, and never add
-a second one (`TRACKER.md` §6).
-
 **Always re-read the body from the server before rewriting it**, never from a copy kept in the
 conversation: the update replaces the whole field and does not merge, so an old version erases
 what the user ticked from the page while you were working. And check that the file is not
@@ -289,7 +282,7 @@ commit with verification failing, never a commit that covers two phases.
 ## 4. Where this skill ends
 
 At the commit of the last phase, with all the boxes ticked on the issue. **You do not open the
-MR/PR here**: `/issue-flow:close <number>` opens it, redoing the verification on the final tree
+MR/PR here**: `/crew:close <number>` opens it, redoing the verification on the final tree
 and writing its body. Telling the user so in the delivery is part of the job — otherwise they
 are left with a ready branch and nobody to take it to its destination.
 
@@ -301,14 +294,14 @@ looking at the git log.
 
 A few lines: the closed phases with their commits (`git log --oneline`), the checkboxes left
 empty with the reason, the deviations written in the roadmap, the problems the subagents saw
-outside their perimeter, and how to continue: `/issue-flow:close <number>`. Do not paste the
+outside their perimeter, and how to continue: `/crew:close <number>`. Do not paste the
 issue or the diff.
 
 If it was a child of a big-plan, say so too: which child comes next in the mother, and that it
-starts only after the merge of this one, with `/issue-flow:close <number> --merged` ticking the
-box on the mother — or that `/issue-flow:big-implement <mother>` moves all the remaining
+starts only after the merge of this one, with `/crew:close <number> --merged` ticking the
+box on the mother — or that `/crew:big-implement <mother>` moves all the remaining
 children forward without waiting for the merges. For a child on the mother branch,
-`/issue-flow:close <number>` merges it there by itself, and there is no merge to wait for.
+`/crew:close <number>` merges it there by itself, and there is no merge to wait for.
 
 ## When to really stop
 

@@ -1,6 +1,6 @@
 ---
 name: big-implement
-description: "Runs, in a single execution, all the child issues of a /issue-flow:big-plan mother issue — GitLab or GitHub — on the mother branch: one child at a time, in the mother's order, each handed to an issue-runner subagent that does the round of /issue-flow:implement (one subagent per phase, checkboxes ticked, one commit per phase) and the one of /issue-flow:close, which verifies, opens the merge request — pull request on GitHub — towards the mother branch and merges it by itself. At the end it opens the mother's MR/PR towards the target branch, which only the user merges. Trigger: /issue-flow:big-implement, 'implement the whole project N', 'run the whole roadmap N', 'run all the children of N'."
+description: "Runs, in a single execution, all the child issues of a /crew:big-plan mother issue — GitLab or GitHub — on the mother branch: one child at a time, in the mother's order, each handed to an issue-runner subagent that does the round of /crew:implement (one subagent per phase, checkboxes ticked, one commit per phase) and the one of /crew:close, which verifies, opens the merge request — pull request on GitHub — towards the mother branch and merges it by itself. At the end it opens the mother's MR/PR towards the target branch, which only the user merges. Trigger: /crew:big-implement, 'implement the whole project N', 'run the whole roadmap N', 'run all the children of N'."
 argument-hint: "<mother>"
 hooks:
   Stop:
@@ -9,9 +9,9 @@ hooks:
           command: "${CLAUDE_PLUGIN_ROOT}/scripts/goal-stop.sh"
 ---
 
-# /issue-flow:big-implement
+# /crew:big-implement
 
-`/issue-flow:implement <mother>` runs **one** child and stops: the next one starts only after the
+`/crew:implement <mother>` runs **one** child and stops: the next one starts only after the
 previous one is merged, which the user does. This skill carries the **whole project** forward in
 one go, without waiting for anyone until the end:
 
@@ -41,15 +41,15 @@ before the first command.** Below there is only what changes.
 ## Usage
 
 ```
-/issue-flow:big-implement <mother>   # runs, in sequence, all the children not yet merged
+/crew:big-implement <mother>   # runs, in sequence, all the children not yet merged
 ```
 
 ## You are the orchestrator, of the whole project
 
 You do not implement the children and you do not orchestrate their phases: you hand each child to
-an `issue-flow:issue-runner` subagent, which does the round of `implement` and `close` for it
+a `crew:issue-runner` subagent, which does the round of `implement` and `close` for it
 up to the merge into the mother branch, and in turn hands each phase to an
-`issue-flow:issue-phase` subagent:
+`crew:issue-phase` subagent:
 
 ```
 you (big-implement)                 the project: chain, mother branch, goal, mother's MR/PR
@@ -77,20 +77,18 @@ Identical to step 0 of `implement`.
 ## 1. Read the mother and work out the chain
 
 Read the mother from the server as in step 1 of `implement`. If the top of the body does not have
-`**Type:** roadmap` (or `**Tipo:** roadmap` on a 1.x issue), it is not a mother: say so and
-propose `/issue-flow:implement <number>`. Both spellings are in `TRACKER.md` §6.
+`**Type:** roadmap`, it is not a mother: say so and propose `/crew:implement <number>`.
 
-From the **Issues** section (`## Issues`, or `## Issue` on a 1.x issue), in order, take the
-`- [ ] #<n>` lines: they are the children to carry forward. The `- [x]` ones are already merged —
+From the **Issues** section (`## Issues`), in order, take the `- [ ] #<n>` lines: they are the
+children to carry forward. The `- [x]` ones are already merged —
 into the mother branch or, from a round done by hand, into the target branch — and are not
 touched. For each child still to do, look on the tracker:
 
 - **the state**: if it is already closed but the box is empty, the mother has fallen behind —
   flag it, do not re-run it, and treat it as merged;
-- **the dependencies** — `· depends on #<k>` in the mother (`· dipende da #<k>` on a 1.x issue),
-  `**Depends on:**` in the child (`**Dipende da:**`): each one must be merged (box ticked or
-  issue closed) **or** a child that this run carries forward **before** it. A dependency in
-  neither case — an open external issue, a sibling that comes later in the order — is a roadmap
+- **the dependencies** — `· depends on #<k>` in the mother, `**Depends on:**` in the child:
+  each one must be merged (box ticked or issue closed) **or** a child that this run carries
+  forward **before** it. A dependency in neither case — an open external issue, a sibling that comes later in the order — is a roadmap
   that does not hold: stop and say so;
 - **whether it has already started** in a previous round: the branch
   `${user_config.branch_prefix}<n>` exists, has ticked checkboxes, already has an MR/PR
@@ -135,8 +133,7 @@ If the branch already existed from a previous round, align it to `origin` with
 mother branch is realigned only once, at step 5 — in `close` on the mother —, where a conflict
 is the user's decision.
 
-Bring the mother's **Status:** line to `in progress — k of M issues merged into <mother-branch>`
-(on a 1.x mother, on the status line that is already there — `TRACKER.md` §6).
+Bring the mother's **Status:** line to `in progress — k of M issues merged into <mother-branch>`.
 
 ## 3. The goal covers the whole project
 
@@ -148,13 +145,13 @@ child is merged into its branch. So the goal holds until the last merge, not onl
 phase.
 
 ```bash
-GOAL_DIR=$(git rev-parse --path-format=absolute --git-path issue-flow)
+GOAL_DIR=$(git rev-parse --path-format=absolute --git-path crew)
 mkdir -p "$GOAL_DIR" && printf '%s\n' 21 22 23 20 > "$GOAL_DIR/goal" && rm -f "$GOAL_DIR/in-flight"
 ```
 
 You write it after step 2, before the first child. `in-flight` works as in `implement`, but it
 signals the **runner** at work: you create it right before delegating the child and delete it
-as soon as the runner returns. One runner at a time. The runner does not touch `.git/issue-flow/`:
+as soon as the runner returns. One runner at a time. The runner does not touch `.git/crew/`:
 the goal and `in-flight` are yours alone.
 
 When the last child is merged the hook lets you stop even if the mother's MR/PR is not open
@@ -169,7 +166,7 @@ child's round (4.2), you check how it ended (4.3). Then the next child.
 
 ### 4.1 Delegate the child
 
-One call of the `Agent` tool with `subagent_type: "issue-flow:issue-runner"`. The runner has not
+One call of the `Agent` tool with `subagent_type: "crew:issue-runner"`. The runner has not
 seen the conversation: **what you do not write to it does not exist**. In the prompt:
 
 - the number and title of the child, the number of the mother, the mother branch and the target
@@ -217,7 +214,7 @@ there. If they do not hold, you stop as `implement` says.
 #### The phases
 
 Step 3 of `implement`, with a single variant: no `in-flight` and no `goal`, which belong to
-`big-implement`. A **new** `issue-flow:issue-phase` subagent for every phase with the child's
+`big-implement`. A **new** `crew:issue-phase` subagent for every phase with the child's
 full context, verification run by the runner, tick on the issue re-reading it from the server,
 one commit per phase with `(#<child>)` in the message. At the end of the phases, the child's
 **Status:** line as at step 4 of `implement`.
@@ -271,7 +268,7 @@ Then move on to the next child.
 
 ## 5. The mother's MR/PR
 
-When all the boxes of the mother's **Issues** section (`## Issue` on a 1.x issue) are ticked,
+When all the boxes of the mother's **Issues** section are ticked,
 `close` on the mother, in its "mother" case: it redoes the verification on the final tree of the
 mother branch, aligns the documentation, pushes and opens the MR/PR
 `mother branch → target branch` with `Closes #<mother>`. **Never the merge**: the user approves
@@ -291,7 +288,7 @@ child   MR/PR  phases  merged into
 
 Then the checkboxes left empty with the reason, the deviations written in the roadmaps, the
 problems the subagents saw outside their perimeter. And how to continue: once the mother's MR/PR
-is merged, `/issue-flow:close <mother> --merged`, which closes the mother and deletes its
+is merged, `/crew:close <mother> --merged`, which closes the mother and deletes its
 branch.
 
 Do not paste the issues or the diff.
@@ -302,7 +299,7 @@ All the cases of "When to really stop" of `implement` and of `close` — which f
 runner meets, and reports to you —, plus one: **if a child stops, the project stops with it.**
 The next one would be born from a mother branch without its work, so there is no skipping ahead.
 In the delivery say which child stopped, at what point — phase, MR/PR, merge — why, and that you
-resume with `/issue-flow:big-implement <mother>` once it is sorted out: step 1 finds the children
+resume with `/crew:big-implement <mother>` once it is sorted out: step 1 finds the children
 already merged and restarts from there.
 
 Before stopping, `rm -f "$GOAL_DIR/goal"`: otherwise the hook sends you back to work.

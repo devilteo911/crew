@@ -1,12 +1,12 @@
 ---
 name: close
-description: "Takes the work of an already implemented issue to a merge request — a pull request on GitHub: checks that the roadmap is really all ticked, redoes the verification on the final tree, pushes the branch and opens the MR/PR with Closes #number. Once merged, it closes the issue and, if it is a child of a /issue-flow:big-plan, ticks it on the mother. A child of a project that has a mother branch — the one of /issue-flow:big-implement — goes to an MR/PR towards that branch and merges it on its own; the mother goes to an MR/PR towards the target branch, which the user merges. Trigger: /issue-flow:close, 'open the merge request of issue N', 'close issue N'."
+description: "Takes the work of an already implemented issue to a merge request — a pull request on GitHub: checks that the roadmap is really all ticked, redoes the verification on the final tree, pushes the branch and opens the MR/PR with Closes #number. Once merged, it closes the issue and, if it is a child of a /crew:big-plan, ticks it on the mother. A child of a project that has a mother branch — the one of /crew:big-implement — goes to an MR/PR towards that branch and merges it on its own; the mother goes to an MR/PR towards the target branch, which the user merges. Trigger: /crew:close, 'open the merge request of issue N', 'close issue N'."
 argument-hint: "<number> [--merged]"
 ---
 
-# /issue-flow:close
+# /crew:close
 
-`/issue-flow:implement` leaves a branch with one commit per phase and the roadmap ticked. This
+`/crew:implement` leaves a branch with one commit per phase and the roadmap ticked. This
 skill takes it in front of whoever has to read it: a merge request — a pull request, if the
 tracker is GitHub — with a body that says what changes and how it was verified. Below,
 "MR/PR" stands for whichever of the two applies in this repo; to the user you say the right
@@ -17,7 +17,7 @@ the user, always: towards `${user_config.default_branch}` this skill never runs 
 or `gh pr merge`, not even if the pipelines are green.
 
 The one exception is the child of a project that has a **mother branch** — the one that
-`/issue-flow:big-implement` opens: its MR/PR points to the mother branch, which is the
+`/crew:big-implement` opens: its MR/PR points to the mother branch, which is the
 project's worksite and not the product, and this skill merges it on its own after the usual
 checks. The work reaches the target branch only with the mother's MR/PR, and the user merges
 that one.
@@ -25,14 +25,12 @@ that one.
 ## Usage
 
 ```
-/issue-flow:close <number>            # opens the issue's MR/PR
-/issue-flow:close <child>             # with the mother branch: MR/PR towards it, merged and closed here
-/issue-flow:close <mother>            # with all the children merged: the mother branch's MR/PR
-/issue-flow:close <number> --merged   # once merged: closes the issue and aligns the Status
-/issue-flow:close                     # infers the number from the current branch
+/crew:close <number>            # opens the issue's MR/PR
+/crew:close <child>             # with the mother branch: MR/PR towards it, merged and closed here
+/crew:close <mother>            # with all the children merged: the mother branch's MR/PR
+/crew:close <number> --merged   # once merged: closes the issue and aligns the Status
+/crew:close                     # infers the number from the current branch
 ```
-
-The 1.x argument `--chiudi` is still accepted in place of `--merged` (`TRACKER.md` §6).
 
 ## 0. Which tracker, and does it answer
 
@@ -52,16 +50,15 @@ it is interactive.
 
 ## 0 bis. Which case
 
-Re-read the issue from the server and look at the top of the body (both spellings of the
-markers are in `TRACKER.md` §6). The case decides the **base** — the branch the MR/PR points
-to — and who merges it:
+Re-read the issue from the server and look at the top of the body. The case decides the
+**base** — the branch the MR/PR points to — and who merges it:
 
 | case | how you recognise it | base | merge |
 |---|---|---|---|
-| **issue** | no `**Type:**` (`**Tipo:**` on a 1.x issue) and no `**Roadmap:**` | target branch | the user |
+| **issue** | no `**Type:**` and no `**Roadmap:**` | target branch | the user |
 | **child** | `**Roadmap:** #<mother>`, and the mother branch is **not** on `origin` | target branch | the user |
 | **child on the mother branch** | `**Roadmap:** #<mother>`, and the mother branch is on `origin` | mother branch | this skill, at step 3 bis |
-| **mother** | `**Type:** roadmap` (`**Tipo:** roadmap` on a 1.x issue), and the mother branch is on `origin` | target branch | the user |
+| **mother** | `**Type:** roadmap`, and the mother branch is on `origin` | target branch | the user |
 
 The target branch is `${user_config.default_branch}`, or what
 `git symbolic-ref --short refs/remotes/origin/HEAD | sed 's#^origin/##'` returns. The mother
@@ -99,14 +96,14 @@ grep -c '^[[:space:]]*- \[[xX]\]'  "$SCRATCH/roadmap.md"   # ticked
 grep -n  '^[[:space:]]*- \[ \]'    "$SCRATCH/roadmap.md"   # the ones left
 ```
 
-For the **mother** the boxes are those of the **Issues** section (`## Issues`, or `## Issue` on
-a 1.x issue), one per child, and they count like the others: all ticked means all the children
-merged into the mother branch. Also check that every child is closed on the tracker; a box
+For the **mother** the boxes are those of the **Issues** section (`## Issues`), one per
+child, and they count like the others: all ticked means all the children merged into the
+mother branch. Also check that every child is closed on the tracker; a box
 ticked on an open child, or the opposite, is a mother that fell behind and has to be fixed
 first.
 
 If empty boxes remain, list them for the user and ask: either work is missing — and then you go
-back to `/issue-flow:implement <number>` — or they have been dropped and the line has to be
+back to `/crew:implement <number>` — or they have been dropped and the line has to be
 rewritten to tell the truth. Do not tick them yourself to make the count add up.
 
 **The branch is the right one and has nothing pending.** The working branch is
@@ -226,14 +223,11 @@ glab issue view <number> --output json --jq '.description' > "$SCRATCH/roadmap.m
 # GitHub
 gh issue view <number> --json body --jq '.body' > "$SCRATCH/roadmap.md" && sed -i 's/\r$//' "$SCRATCH/roadmap.md"
 
-# you touch only the status line: `**Status:**`, or `**Stato:**` on a 1.x issue
+# you touch only the status line: `**Status:**`
 
 glab issue update <number> --description-file "$SCRATCH/roadmap.md"   # GitLab
 gh   issue edit   <number> --body-file        "$SCRATCH/roadmap.md"   # GitHub
 ```
-
-On a 1.x issue the English value goes on the status line that is already there, and you never
-add a second one (`TRACKER.md` §6).
 
 For the **child on the mother branch** you do not stop here: go on with step 3 bis. In the
 other cases the skill ends with the MR/PR open, and goes on when the user comes back with
@@ -318,7 +312,7 @@ glab issue view <mother> --output json --jq '.description' > "$SCRATCH/mother.md
 # GitHub
 gh issue view <mother> --json body --jq '.body' > "$SCRATCH/mother.md" && sed -i 's/\r$//' "$SCRATCH/mother.md"
 
-# turn into `- [x]` ONLY the `- [ ] #<number>` line of the Issues section (`## Issues`, or `## Issue` on a 1.x mother)
+# turn into `- [x]` ONLY the `- [ ] #<number>` line of the Issues section (`## Issues`)
 # bring the mother's status line to `in progress — k of M issues merged`
 
 glab issue update <mother> --description-file "$SCRATCH/mother.md"   # GitLab
@@ -333,14 +327,14 @@ For the **child on the mother branch** the mother's **Status:** becomes
 `in progress — k of M issues merged into <mother-branch>`, and the mother is **not closed**
 even when the last box is ticked: the work is in the mother branch, not yet in the target
 branch. In the delivery name the next child — or, if they were all done, the next step:
-`/issue-flow:close <mother>`, which opens the mother's MR/PR.
+`/crew:close <mother>`, which opens the mother's MR/PR.
 
 For the **child** merged directly into the target branch, if after the tick all the boxes of the
 Issues section are `- [x]`, the project is finished: bring the mother's **Status:** to
 `closed — completed on DD/MM/YYYY` and close it (`glab issue close <mother>`,
 `gh issue close <mother>`). Otherwise, in the delivery, name the next child: the first
-`- [ ] #<n>` left, to start with `/issue-flow:implement <n>` — or
-`/issue-flow:implement <mother>`, which finds it on its own.
+`- [ ] #<n>` left, to start with `/crew:implement <n>` — or
+`/crew:implement <mother>`, which finds it on its own.
 
 ### The mother
 

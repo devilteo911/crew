@@ -59,16 +59,16 @@ The children are executed **one at a time, in the order above**, each with its o
 own merge request — pull request on GitHub:
 
 ```
-/issue-flow:implement <child>         # or the number of this issue: takes the first open child
-/issue-flow:close <child>             # opens the child's merge request
-/issue-flow:close <child> --merged    # once merged: closes the child and ticks it here
+/crew:implement <child>         # or the number of this issue: takes the first open child
+/crew:close <child>             # opens the child's merge request
+/crew:close <child> --merged    # once merged: closes the child and ticks it here
 ```
 
-Or all at once, without waiting for the merges, with `/issue-flow:big-implement <this
+Or all at once, without waiting for the merges, with `/crew:big-implement <this
 issue>`: this issue has its own branch, each child is born from there and goes back in with a
-merge request that is merged automatically after the checks of `/issue-flow:close`; at the end
+merge request that is merged automatically after the checks of `/crew:close`; at the end
 the merge request of this issue carries the whole project into the target branch, and only
-whoever approves it merges it. Once merged, `/issue-flow:close <this issue> --merged`.
+whoever approves it merges it. Once merged, `/crew:close <this issue> --merged`.
 
 A box of this issue is ticked **when the child is merged** — into the target branch, or into
 this issue's branch — not when it is implemented. The next child starts from there, with the work
@@ -80,7 +80,7 @@ this issue — this issue is closed, and the **Status:** becomes
 
 If during execution the roadmap stops holding — a decision turns out to be wrong, a child has to
 be split or redone — the issues are fixed before the code: this one, re-reading it from the
-server before rewriting it, and the children touched with `/issue-flow:plan revise <number>`.
+server before rewriting it, and the children touched with `/crew:plan revise <number>`.
 
 ## Out of scope
 

@@ -1,12 +1,12 @@
 ---
 name: big-plan
-description: "Turns a large development — more than fits in one issue — into a project roadmap on the repo's tracker, GitLab or GitHub: a mother issue with goal, architecture and decisions, and the child issues that carry it out in sequence, each complete with plan and checkboxes and written by a dedicated subagent. Trigger: /issue-flow:big-plan, 'plan the project…', 'split into issues…', 'make the roadmap of…'."
+description: "Turns a large development — more than fits in one issue — into a project roadmap on the repo's tracker, GitLab or GitHub: a mother issue with goal, architecture and decisions, and the child issues that carry it out in sequence, each complete with plan and checkboxes and written by a dedicated subagent. Trigger: /crew:big-plan, 'plan the project…', 'split into issues…', 'make the roadmap of…'."
 argument-hint: "<description of the development>"
 ---
 
-# /issue-flow:big-plan
+# /crew:big-plan
 
-`/issue-flow:plan` is for **one** feature: one issue, 5 to 8 phases, one merge request. When the
+`/crew:plan` is for **one** feature: one issue, 5 to 8 phases, one merge request. When the
 development does not fit — a new subsystem, a migration in several stages, a feature that
 crosses backend, data and interface — this skill turns it into a **project**: a mother issue
 that holds the overall roadmap, and the child issues that carry it out one at a time, each
@@ -21,11 +21,11 @@ commands of the two platforms and their traps. **Read both before the first comm
 ## Usage
 
 ```
-/issue-flow:big-plan <description of the development>   # from the request to the mother and the children
-/issue-flow:big-plan                                    # uses a roadmap already approved in the conversation
+/crew:big-plan <description of the development>   # from the request to the mother and the children
+/crew:big-plan                                    # uses a roadmap already approved in the conversation
 ```
 
-### When you arrive from `/issue-flow:plan`
+### When you arrive from `/crew:plan`
 
 `plan` always checks whether the request fits in one issue, and when it does not it warns the
 user and proposes switching here. If the user accepts, this skill is loaded in the same
@@ -38,7 +38,7 @@ because `plan` was looking closely at the first piece — and at step 3 start fr
 `plan` instead of from zero: correct it where the complete reconnaissance requires, and in the
 summary of step 4 say what changed from the draft the user had seen.
 
-### When you arrive from `/issue-flow:roadmap`
+### When you arrive from `/crew:roadmap`
 
 `roadmap` proposes the project's next steps by reading its documentation, and when the user
 chooses "Create the issues" it loads this skill in the same conversation. Here too some work is
@@ -68,7 +68,7 @@ You define the roadmap, take the decisions with the user, open the mother, **del
 writing of each child to a subagent, and then check and create everything on the tracker. You do
 not write the children's bodies yourself.
 
-The reason is the same as for `/issue-flow:implement`: each child requires its own reconnaissance
+The reason is the same as for `/crew:implement`: each child requires its own reconnaissance
 in the code — files really read, lines verified, numbers measured — and done all in here it
 would fill the context until you lose the overall view, which is the only thing that only you
 have. The subagent starts clean, reads only what its issue needs, and hands you a body to check.
@@ -122,7 +122,7 @@ This is the work this skill does and `plan` does not. The rules:
   created — with the name they will have), what stays out.
 
 If the decomposition gives **a single** issue, the development is not big: say so and propose
-`/issue-flow:plan`, instead of opening a mother with a single child.
+`/crew:plan`, instead of opening a mother with a single child.
 
 ### 4. Present the roadmap and get it approved
 
@@ -132,7 +132,7 @@ list of children — one line each, with what it delivers and what it depends on
 `AskUserQuestion` with three options: "Open the issues" (Recommended), "Change something" (the
 user says what, you fix it and ask again), "Leave it" (you open nothing and stop).
 
-If the roadmap was already approved in this conversation — or it is `/issue-flow:big-plan` with no
+If the roadmap was already approved in this conversation — or it is `/crew:big-plan` with no
 arguments — skip the summary and the question and go to step 5.
 
 ### 5. Open the mother
@@ -152,7 +152,7 @@ You read the number from the URL the command prints.
 
 ### 6. Write the children, one subagent per child
 
-One invocation of the `Agent` tool with `subagent_type: "issue-flow:issue-writer"` **for each
+One invocation of the `Agent` tool with `subagent_type: "crew:issue-writer"` **for each
 child**. The writers read the code and write a file in the scratchpad, nothing more: they do not
 step on each other's toes, so **launch them all together, in a single message**.
 
@@ -212,8 +212,8 @@ every re-read body must find no placeholders left.
 In a few lines: the mother's link, the list of children with number, title and link in
 execution order, what you found in reconnaissance that the request did not foresee, the decisions
 taken on your own with their reasons, and what was left out. Close with how to start:
-`/issue-flow:implement <mother>`, which takes the first open child on its own, or
-`/issue-flow:big-implement <mother>`, which carries them all forward in sequence. Do not paste the
+`/crew:implement <mother>`, which takes the first open child on its own, or
+`/crew:big-implement <mother>`, which carries them all forward in sequence. Do not paste the
 issues in the reply.
 
 ## How to proceed in the project
@@ -221,22 +221,22 @@ issues in the reply.
 Not with this skill. The children are executed **one at a time, in order**, with the normal round:
 
 ```
-/issue-flow:implement <child>            # or <mother>: takes the first child not yet merged
-/issue-flow:close <child>                # opens the child's MR/PR
-/issue-flow:close <child> --merged       # once merged: closes the child and ticks it on the mother
+/crew:implement <child>            # or <mother>: takes the first child not yet merged
+/crew:close <child>                # opens the child's MR/PR
+/crew:close <child> --merged       # once merged: closes the child and ticks it on the mother
 ```
 
 and then the next child, which starts from the target branch with the work of the previous ones
 in it. The mother's box is ticked **when the child is merged**, not when it is implemented:
-`/issue-flow:close --merged` does it, and it closes the mother too when the last box is
-ticked. The 1.x spellings of the renamed arguments are still accepted (`TRACKER.md` §6).
+`/crew:close --merged` does it, and it closes the mother too when the last box is
+ticked.
 
-Or all at once with `/issue-flow:big-implement <mother>`: the same round, one child at a time,
+Or all at once with `/crew:big-implement <mother>`: the same round, one child at a time,
 on the mother branch — each child is born from there and goes back in with its MR/PR, which
 `close` merges on its own after the usual checks. At the end the mother's MR/PR carries
-everything into the target branch, and the user merges it; then `/issue-flow:close <mother> --merged`.
+everything into the target branch, and the user merges it; then `/crew:close <mother> --merged`.
 
 If during execution a child discovers that the roadmap no longer holds — a decision of the
 mother turns out to be wrong, a later child has to be redone — the remedy is to fix the issues
-before the code: `/issue-flow:plan revise <n>` for the child, and the mother rewritten by hand
+before the code: `/crew:plan revise <n>` for the child, and the mother rewritten by hand
 with the usual rule.

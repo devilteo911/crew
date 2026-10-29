@@ -14,7 +14,7 @@ slashes. Which one it is, `TRACKER.md` says.
 
 - **Status:** to do
 - **Planned branch:** `issue-<number>`
-- **Roadmap:** #<mother>   [only for children of `/issue-flow:big-plan`]
+- **Roadmap:** #<mother>   [only for children of `/crew:big-plan`]
 - **Depends on:** #<number>            [only for children, one line per sibling it depends on]
 
 ## Goal
@@ -75,7 +75,7 @@ and the Figma first if the project has one configured — are described in `SKIL
 - [ ] `<documentation file>`: [what must be rewritten, not "update the docs"]
 - [ ] commit on the issue's branch
 
-[The MR/PR does not go among the checkboxes: `/issue-flow:close <number>` opens it after the last
+[The MR/PR does not go among the checkboxes: `/crew:close <number>` opens it after the last
 phase, and it is not merged — the user asks for the merge.]
 
 ## How to update this roadmap
@@ -108,7 +108,7 @@ sed -i 's/\r$//' roadmap.md
 gh issue edit <number> --body-file roadmap.md
 ```
 
-When the work is done: all the boxes ticked, then `/issue-flow:close <number>` opens the merge
+When the work is done: all the boxes ticked, then `/crew:close <number>` opens the merge
 request — the pull request on GitHub — and sets **Status:** to `in review — !<MR number>` on
 GitLab, `in review — #<PR number>` on GitHub. After the merge,
 `glab issue close <number>` or `gh issue close <number>`, and **Status:** becomes

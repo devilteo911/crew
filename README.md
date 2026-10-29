@@ -16,10 +16,13 @@ which uses the clone where it is.
 `crew` keeps that clone up to date: at every launch it fetches and
 fast-forwards it (offline, diverged or locally changed means one warning and
 the launch goes on). Development clones are never touched. `CREW_NO_UPDATE=1`
-turns the update off. When a pull changes the issue-flow version, `crew` runs
-`claude plugin marketplace update crew` and `claude plugin update
-issue-flow@crew`; sessions already open need a restart to load it. A clone
-older than 0.4.0 has no self-update: run the curl command once more.
+turns the update off. When a pull changes the crew plugin's version, `crew`
+runs `claude plugin marketplace update crew` and `claude plugin update
+crew@crew`; sessions already open need a restart to load it. The first launch
+after the plugin's update to 3.0.0 also replaces `issue-flow@crew` with
+`crew@crew`, once and on its own; that launch can print one `could not refresh
+issue-flow` warning, from the launcher being replaced. A clone older than 0.4.0
+has no self-update: run the curl command once more.
 
 The two symlinks:
 
@@ -31,7 +34,7 @@ selected:
 
 ```
 crew: plugins for the crew sessions, all selected:
-  1) [x] issue-flow   plan and implement through issues    (marketplace crew, this clone)
+  1) [x] crew         plan and implement through issues    (marketplace crew, this clone)
   2) [x] ponytail     the laziest code that works          (DietrichGebert/ponytail)
   3) [x] caveman      terse prose, fewer tokens            (JuliusBrussee/caveman)
 crew: Enter installs the selected; type the numbers to leave out (e.g. "3"):
@@ -39,11 +42,12 @@ crew: Enter installs the selected; type the numbers to leave out (e.g. "3"):
 
 Enter installs all three; `3`, `2 3` or `23` leaves those rows out. Plugins
 already installed show `[=]` and `— installed` and are left alone. An old
-`issue-flow@issue-flow` is replaced by `issue-flow@crew`, and the `issue-flow`
-marketplace is removed so the skills don't show up twice. The menu is skipped
-without `claude` on the PATH or without a terminal: rerun the installer once
-you have them. Open Claude Code sessions need a restart to load what was
-installed.
+`issue-flow@issue-flow` is replaced by `crew@crew`, and the `issue-flow`
+marketplace is removed so the skills don't show up twice. An installed
+`issue-flow@crew` is replaced by `crew@crew` without asking, with or without a
+terminal. The menu needs `claude` on the PATH and a terminal, the replacement
+only `claude`: rerun the installer once you have them. Open Claude Code
+sessions need a restart to load what was installed.
 
 It also asks — once, and only if VS Code is installed — whether to bind
 `cmd+shift+c` (macOS) or `meta+shift+c` (Linux/Windows: Super/Win) to open the
@@ -85,41 +89,63 @@ The two profiles that ship with it: `sottoposto` leads and reviews, `ciurma`
 writes the code. The crew talks to itself in English; the sottoposto answers
 the user in the user's own language.
 
-The profiles expect the [issue-flow](plugins/issue-flow/)
-plugin: the sottoposto plans the issue, the ciurma implements it, the
-sottoposto reviews, and the user decides when to open the PR. It needs a
+The profiles expect [the crew plugin](plugins/crew/): the sottoposto plans the
+issue, the ciurma implements it, the sottoposto reviews, and the user decides
+when to open the PR. It needs a
 GitHub or GitLab remote with `gh`/`glab` authenticated. The plugin ships in
-this repo (`plugins/issue-flow/`, marketplace `crew`, registered from the
+this repo (`plugins/crew/`, marketplace `crew`, registered from the
 clone). If it is missing the sottoposto asks, installs it with `claude plugin`
 and asks for a restart; the ciurma does the same for ponytail and caveman. If
 the user declines, or the repo has no such tracker, it falls back to a plain
 plan session.
 
-## issue-flow
+## The crew plugin
 
-issue-flow lives in `plugins/issue-flow/`, imported with its history from
-https://github.com/MatteoSid/Issues-Master-Skills. The repo is a Claude Code
-marketplace named `crew` (`.claude-plugin/marketplace.json`), so one clone
-carries the launcher, the profiles and the plugin.
+The plugin lives in `plugins/crew/`. The repo is a Claude Code marketplace
+named `crew` (`.claude-plugin/marketplace.json`), so one clone carries the
+launcher, the profiles and the plugin.
+
+It is a fork of [Issues-Master-Skills](https://github.com/MatteoSid/Issues-Master-Skills),
+imported with its history at upstream commit `2305db3` (`40b9aba`), translated
+to English in 2.0.0 and renamed `crew` in 3.0.0. Upstream goes on on its own
+(2.2.0, with a different design) and is not tracked: no upstream commit is
+merged, and an idea worth having is ported by hand in its own issue.
 
 To install it by hand:
 
 ```sh
-claude plugin uninstall issue-flow@issue-flow   # only if the old marketplace's copy is installed
 claude plugin marketplace add ~/.local/share/crew   # or the path of a clone
-claude plugin install issue-flow@crew
+claude plugin install crew@crew
 ```
 
-The uninstall keeps the skills from appearing twice.
+From `issue-flow` to `crew`, what a machine has to do:
+
+```sh
+claude plugin marketplace update crew && claude plugin install crew@crew && claude plugin uninstall issue-flow@crew
+claude plugin marketplace remove issue-flow   # only if upstream's issue-flow@issue-flow is installed
+```
+
+then restart the crew sessions: the commands are now `/crew:*`. A
+curl-installed clone replaces `issue-flow@crew` by itself at its next launch;
+upstream's `issue-flow@issue-flow` goes only with `./install.sh` or the second
+command. A development clone pulls, then runs `./install.sh` or the commands
+above. Issues still written with the 1.x markers are no longer read: finish
+them before updating.
+Options set with `/plugin configure` on `issue-flow@crew` do not move:
+`claude plugin configure issue-flow@crew` shows them before the update, and
+they are set again on `crew@crew`.
+
+A marketplace registered from a directory, which is what `install.sh` does with
+a clone, loads the plugin live from that working tree: `claude plugin list
+--json` shows it as `readFromFolder`. A development clone therefore runs the
+plugin it is changing, Stop hook included. To work on the plugin, register the
+marketplace from GitHub (`claude plugin marketplace add
+https://github.com/devilteo911/crew.git`), which changes only with `claude
+plugin marketplace update crew`.
 
 A plugin change reaches users only with a version bump in both
-`plugins/issue-flow/.claude-plugin/plugin.json` and
+`plugins/crew/.claude-plugin/plugin.json` and
 `.claude-plugin/marketplace.json`.
-
-Upstream [Issues-Master-Skills](https://github.com/MatteoSid/Issues-Master-Skills)
-is frozen at the imported commit, and crew is issue-flow's only home from 2.0.0
-on: the tree is translated, so Italian upstream commits would conflict on every
-file and no longer come in.
 
 ## Platforms
 
@@ -133,5 +159,5 @@ A release ships by bumping `VERSION` on the branch: merging it to `main` tags
 `v<VERSION>` and publishes the GitHub Release. A merge without a bump creates
 nothing.
 
-Every push and pull request runs `.github/workflows/check.yml` (shellcheck and
-`claude plugin validate --strict`); it must stay green.
+Every push and pull request runs `.github/workflows/check.yml` (shellcheck,
+`tests/e2e.sh` and `claude plugin validate --strict`); it must stay green.

@@ -1,10 +1,10 @@
 ---
 name: plan
-description: "Turns the request for a single feature into an issue on the repo's tracker — GitLab or GitHub, depending on the remote — with the plan and its roadmap inside: code reconnaissance, design forks put to the user, phases with atomic checkboxes that the tracker makes tickable, and the instructions for ticking them as the work goes. If the work needs more than one issue it notices, warns, and proposes how to proceed, including the switch to /issue-flow:big-plan. Trigger: /issue-flow:plan, 'open an issue for…', 'write the plan for…', 'tick the roadmap of issue N'."
+description: "Turns the request for a single feature into an issue on the repo's tracker — GitLab or GitHub, depending on the remote — with the plan and its roadmap inside: code reconnaissance, design forks put to the user, phases with atomic checkboxes that the tracker makes tickable, and the instructions for ticking them as the work goes. If the work needs more than one issue it notices, warns, and proposes how to proceed, including the switch to /crew:big-plan. Trigger: /crew:plan, 'open an issue for…', 'write the plan for…', 'tick the roadmap of issue N'."
 argument-hint: "<description of the change>"
 ---
 
-# /issue-flow:plan
+# /crew:plan
 
 Nothing gets implemented that is not written in an issue. The issue is not a reminder: it is
 **the work instruction**, and it holds both the plan and the roadmap that carries it out. Whoever
@@ -12,7 +12,7 @@ implements reads that and nothing else.
 
 This skill is for **a single feature**: one issue, 5 to 8 phases, one merge request. If the
 request is a development that does not fit — several increments that each merge on their own —
-the right door is `/issue-flow:big-plan`, which defines the project roadmap and splits it into
+the right door is `/crew:big-plan`, which defines the project roadmap and splits it into
 issues. It is not up to the user to notice: step 2 bis always checks, and if the request does
 not fit in one issue you stop, warn and propose how to proceed.
 
@@ -26,13 +26,11 @@ variants, but the traps (the body field that changes name, the `--limit` of
 ## Usage
 
 ```
-/issue-flow:plan <description of the change>   # the normal case: from the request to the issue
-/issue-flow:plan                               # uses a plan already approved in this conversation
-/issue-flow:plan check <n>                     # re-read the roadmap and update the ticks
-/issue-flow:plan revise <n>                    # reopen the plan of an issue and rewrite it
+/crew:plan <description of the change>   # the normal case: from the request to the issue
+/crew:plan                               # uses a plan already approved in this conversation
+/crew:plan check <n>                     # re-read the roadmap and update the ticks
+/crew:plan revise <n>                    # reopen the plan of an issue and rewrite it
 ```
-
-The 1.x arguments `spunta` and `rivedi` are still accepted as `check` and `revise` (`TRACKER.md` §6).
 
 ## The principle that decides everything else
 
@@ -93,7 +91,7 @@ that would be needed is not installed, stop and say so: an issue is not opened b
 
 **Never call `EnterPlanMode` or `ExitPlanMode`.** `ExitPlanMode` ends with the offer to implement
 the plan, and here the plan is not implemented: it is written into the issue,
-and `/issue-flow:implement` will implement it. The way of working is the same as plan
+and `/crew:implement` will implement it. The way of working is the same as plan
 mode, though, and holds from here until the issue is created:
 
 - **read-only.** Until step 5 you change nothing in the repo: no `Edit` or `Write`
@@ -112,7 +110,7 @@ mode, though, and holds from here until the issue is created:
   of the question nor in the delivery message.
 
 If the plan was already approved in this conversation — the user used plan mode
-on their own and approved it, or it is `/issue-flow:plan` with no arguments — skip the
+on their own and approved it, or it is `/crew:plan` with no arguments — skip the
 summary and the approval question: the reconnaissance is done, do the check of step
 2 bis and, if the request fits in one issue, go to steps 4 and 5.
 
@@ -175,7 +173,7 @@ Before the question, write a short, concrete warning in chat:
 Then `AskUserQuestion`, with these options — in the description of each, write concretely what
 happens next, with the numbers from the draft:
 
-- **"Switch to /issue-flow:big-plan"** (Recommended): a mother issue with the roadmap and the N children
+- **"Switch to /crew:big-plan"** (Recommended): a mother issue with the roadmap and the N children
   of the draft, executed one at a time;
 - **"Open only the first issue"**: this skill continues with the first increment of the draft; the
   rest goes into the issue's **Out of scope**, one point for each of the following issues,
@@ -188,7 +186,7 @@ happens next, with the numbers from the draft:
 
 #### How to proceed
 
-- with **big-plan**: immediately load the `issue-flow:big-plan` skill with the `Skill` tool, in the
+- with **big-plan**: immediately load the `crew:big-plan` skill with the `Skill` tool, in the
   same conversation, passing it the original request. The reconnaissance done so far is not thrown away:
   `big-plan` picks it up where you got to and starts from the split draft. From that
   moment `big-plan` applies, not this skill;
@@ -242,7 +240,7 @@ phases with checkboxes. Both GitLab and GitHub recognise them as task lists and 
 GitLab shows "0 of N tasks completed" and counts them in `task_completion_status`, GitHub
 shows "0 of N tasks" at the top of the issue. The count via API exists only on GitLab, though:
 the way that holds on both is to count the lines in the body, and it is the one used by
-`/issue-flow:implement` and `/issue-flow:close` (`TRACKER.md` §5).
+`/crew:implement` and `/crew:close` (`TRACKER.md` §5).
 
 ### The phases
 
@@ -257,7 +255,7 @@ Two phases are mandatory and always go at the end, in this order:
   also the keyboard check, the responsive layout and accessibility;
 - **the last is closing**: the documentation files that need rewriting, named one by
   one, and the commit on the issue's branch. The MR/PR **is not a roadmap checkbox**: it is
-  opened by `/issue-flow:close <number>` when all the phases are closed.
+  opened by `/crew:close <number>` when all the phases are closed.
 
 A third is conditional: if `${user_config.figma_file}` is configured and the change touches the
 frontend, **the first phase is the Figma**. You work with the `figma:figma-use` skill and the
@@ -297,7 +295,7 @@ The rule, which holds for the user as well as for you:
 - if a decision changes during implementation, you **rewrite the line** of the roadmap:
   a roadmap that lies is worse than no roadmap.
 
-The round to update it, which is also what `/issue-flow:plan check <n>` does:
+The round to update it, which is also what `/crew:plan check <n>` does:
 
 ```bash
 # GitLab — the body field is called `description`
@@ -324,18 +322,16 @@ When all of an issue's checkboxes are ticked and the work is merged, it gets clo
 `closed — merged on DD/MM/YYYY`. On GitHub it may have already closed by itself, if the PR carried
 `Closes #<n>`: look at the state before saying you closed it.
 
-On a 1.x issue, rewrite the value on the status line that is already there, and never add a second one (`TRACKER.md` §6).
-
 ## Who runs the issue
 
-Not this skill: `/issue-flow:implement <n>` picks it up, sends one phase per subagent and ticks
-the boxes as it goes; then `/issue-flow:close <n>` verifies the final tree, opens the MR/PR and,
+Not this skill: `/crew:implement <n>` picks it up, sends one phase per subagent and ticks
+the boxes as it goes; then `/crew:close <n>` verifies the final tree, opens the MR/PR and,
 after the merge, closes the issue. Write the roadmap knowing that whoever reads it will be an
 agent that attended nothing — it is the reason the phases must be self-contained.
 
-The same rules hold for the child issues of `/issue-flow:big-plan`: the subagent
-`issue-flow:issue-writer` writes them following this skill and `TEMPLATE.md`, with in addition at
-the top the **Roadmap** and **Depends on** lines. `/issue-flow:plan revise <n>` works on them too:
+The same rules hold for the child issues of `/crew:big-plan`: the subagent
+`crew:issue-writer` writes them following this skill and `TEMPLATE.md`, with in addition at
+the top the **Roadmap** and **Depends on** lines. `/crew:plan revise <n>` works on them too:
 if the child has the **Roadmap** line, re-read the mother before rewriting it and do not
 contradict its decisions.
 
@@ -345,8 +341,6 @@ Dense prose, technical terms and identifiers in the original. Sentences that car
 information: the *why* of a choice, not its paraphrase.
 
 Issue bodies, merge/pull request bodies and `ROADMAP.md` are written in English, whatever language the chat is in. With the user — summaries, questions, AskUserQuestion options, the delivery message — you talk in the language of the current chat. The option labels quoted in these skills are given in English: render them in that language.
-
-`revise` on a 1.x issue rewrites the body in English with the English markers (`TRACKER.md` §6).
 
 - no estimates in hours or days, no story points, no percentages;
 - no `TBD`, `to be defined`, `consider whether`: if a decision has not been made, make it now or
