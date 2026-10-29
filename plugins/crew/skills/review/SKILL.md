@@ -316,13 +316,14 @@ wrong, why it matters, what would fix it.
 After the comment, in this order:
 
 ```bash
+git rev-parse --short "$SHA"        # <sha7>
+
 "${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body get <number> "$SCRATCH/roadmap.md"
 
 # you touch only the status line: `reviewed — <sha7>` or `changes requested — <sha7>`
 
 "${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body put <number> "$SCRATCH/roadmap.md"
 
-git rev-parse --short "$SHA"        # <sha7>
 git worktree remove --force "$WT"   # only if you made it, at step 2
 ```
 
