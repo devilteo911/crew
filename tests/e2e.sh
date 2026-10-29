@@ -340,6 +340,15 @@ check "D: 'crew run nope' exits non-zero" $?
 grep -qF "crew: no profile 'nope'" "$t/d3.err"
 check "D: 'crew run nope' says crew: no profile 'nope' on stderr" $?
 
+# -V and --version on the managed clone, CREW_NO_UPDATE unset: the version, and nothing else
+n0=$(loglines)
+g0=$(grep -c '' "$t/git.log")
+( cd "$t/proj" && crew -V && crew --version ) >"$t/d4.out" 2>"$t/d4.err"
+is "$(cat "$t/d4.out")" = "$(printf 'crew %s\ncrew %s' "$(cat "$clone/VERSION")" "$(cat "$clone/VERSION")")" && is ! -s "$t/d4.err"
+check "D: 'crew -V' and 'crew --version' print crew and the clone's VERSION" $?
+is "$(loglines)" -eq "$n0" && is "$(tail -n +"$((g0 + 1))" "$t/git.log" | grep -c fetch)" -eq 0
+check "D: 'crew -V' and 'crew --version' start no session and fetch nothing" $?
+
 # =============================================================================================
 echo "== E: the rename reaches a 0.4.0 machine (clone at 64f4e37, issue-flow@crew installed)"
 # 64f4e37 is the last main commit before the rename: its bin/crew is the launcher every 0.4.0

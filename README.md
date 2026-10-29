@@ -77,6 +77,7 @@ profile still means rerunning the installer.
 crew                 # opens the crew in the current directory
 crew ~/project       # ...in another directory
 crew run sottoposto  # starts one profile in the current directory
+crew --version       # prints the version (also -V)
 ```
 
 `run` as the first argument is the subcommand; to open the crew in a directory
