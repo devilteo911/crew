@@ -133,9 +133,12 @@ or carrying changes nobody pushed: a plan read there cites lines the implementer
 ```bash
 git fetch origin
 TREE=$SCRATCH/tree
-git worktree remove --force "$TREE" 2>/dev/null; git worktree prune   # left over from an interrupted run
-git worktree add -q --detach "$TREE" "origin/<base>"
+rm -rf "$TREE"                                            # left over from an interrupted run
+git worktree add -q -f --detach "$TREE" "origin/<base>"   # -f: that one may still be registered
 ```
+
+No `git worktree prune` here: it would also drop the entry of a profile's worktree whose project
+folder has moved, which `crew run` repairs at its next launch.
 
 Stop and say why if the fetch fails, since `origin/<base>` would be stale, or if there is no
 `origin/<base>`: nothing is pushed there yet, and the user pushes it first, with a first commit if
