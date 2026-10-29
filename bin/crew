@@ -86,16 +86,16 @@ migrate
 # launches reuse it untouched: it may hold the session's branch with work in progress. Non-zero on failure.
 # ponytail: .claude/worktrees/ because Claude Code exempts it from its protected paths, and .git/ is one.
 into_worktree() { # <name>
-  common=$(git rev-parse --path-format=absolute --git-common-dir) &&
+  # --git-path, not --path-format=absolute (git 2.31+): the shared exclude file, from any checkout
+  x=$(git rev-parse --git-path info/exclude) &&
     sub=$(git rev-parse --show-prefix) &&
     top=$(git worktree list --porcelain | sed -n '1s/^worktree //p') &&
     [ -n "$top" ] || return 1
   wt="$top/.claude/worktrees/$1"
   if [ ! -e "$wt" ]; then
     # the main checkout's git status must not list the worktree; a last line without its newline keeps its own
-    x="$common/info/exclude"
     grep -qxF /.claude/worktrees/ "$x" 2>/dev/null ||
-      { mkdir -p "$common/info" && { [ ! -s "$x" ] || [ -z "$(tail -c 1 "$x")" ] || echo >>"$x"; } &&
+      { mkdir -p "${x%/*}" && { [ ! -s "$x" ] || [ -z "$(tail -c 1 "$x")" ] || echo >>"$x"; } &&
         echo /.claude/worktrees/ >>"$x"; } || return 1
     fetch5 . || :   # offline: the origin/HEAD already here will do, the skills fetch before branching
     ref=origin/HEAD
