@@ -320,8 +320,9 @@ mother branch has it — `HEAD` now, the tip `close` will push:
   MR/PR towards the target branch.
 - **It refuses** — the normal outcome of a first run: no `close`, and no review of the mother by
   this run, since it implemented the children and the verdict must come from a run other than the
-  one that opens the MR/PR. `rm -f "$GOAL_DIR/goal"` — otherwise the hook sends you back to
-  work —, then the delivery, with the gate's message as it was printed.
+  one that opens the MR/PR. `rm -f "$(git rev-parse --path-format=absolute --git-path crew)/goal"`
+  — written out, since a run that jumped here from step 1 never set `$GOAL_DIR`, and otherwise the
+  hook sends you back to work —, then the delivery, with the gate's message as it was printed.
 
 ## 6. Delivery
 
@@ -353,4 +354,6 @@ In the delivery say which child stopped, at what point — phase, MR/PR, merge �
 resume with `/crew:big-implement <mother>` once it is sorted out: step 1 finds the children
 already merged and restarts from there.
 
-Before stopping, `rm -f "$GOAL_DIR/goal"`: otherwise the hook sends you back to work.
+Before stopping, `rm -f "$(git rev-parse --path-format=absolute --git-path crew)/goal"`: otherwise
+the hook sends you back to work. It is `$GOAL_DIR/goal` written out, since a stop before step 3,
+or after a jump from step 1 to step 5, has no `$GOAL_DIR`.
