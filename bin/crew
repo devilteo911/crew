@@ -3,7 +3,7 @@
 # crew run <name>  starts the one session of that profile, here: the single place that builds the claude command
 # `run` is the subcommand only as an exact first argument; `crew ./run` opens the crew in a directory named run.
 # File name = session name; <name>.md = appended system prompt; optional <name>.model = --model value.
-# optional <name>.worktree (contents ignored) = in a git repo, the session works in its own worktree.
+# optional <name>.worktree (contents ignored) = in a git repo, the session works in its own worktree, and nowhere else.
 set -e
 self=$(readlink "$0" || echo "$0")   # ~/.local/bin/crew is a symlink (install.sh)
 root=$(CDPATH='' cd -- "$(dirname -- "$self")/.." && pwd)
@@ -114,7 +114,15 @@ if [ "${1:-}" = run ]; then
   [ -n "$n" ] && [ -f "$f" ] || { echo "crew: no profile '$n' in $crewdir" >&2; exit 1; }
   m=$(cat "${f%.md}.model" 2>/dev/null | tr -d '[:space:]')
   if [ -f "${f%.md}.worktree" ] && [ "$(git rev-parse --is-inside-work-tree 2>/dev/null)" = true ]; then
-    into_worktree "$n" || echo "crew: could not set up the worktree of $n, starting in $PWD" >&2
+    # no worktree, no session: in the main checkout the skills would move it off the target branch
+    if ! into_worktree "$n"; then
+      if git rev-parse -q --verify HEAD >/dev/null; then
+        echo "crew: could not set up the worktree of $n${wt:+ at $wt}, not starting it" >&2
+      else
+        echo "crew: $n works in its own git worktree, which needs a commit: make the repo's first commit, then run crew again" >&2
+      fi
+      exit 1
+    fi
   fi
   exec claude -n "$n" ${m:+--model "$m"} --append-system-prompt-file "$f"
 fi

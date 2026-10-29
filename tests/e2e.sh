@@ -506,16 +506,27 @@ check "G: outside a git repo, worker starts where it was launched" $?
 is ! -s "$t/g7.err"
 check "G: outside a git repo, nothing on stderr" $?
 
-# failure path: an empty repo has no commit to start the worktree from
+# failure path: an empty repo has no commit to start the worktree from, and crew run starts
+# nothing rather than the session in the main checkout
 g init -q "$t/wempty" || die "setup: empty repo"
 n0=$(loglines)
 wrun "$t/wempty" worker >"$t/g8.out" 2>"$t/g8.err"
-new_has "$n0" "$(line_of "$t/wempty" worker)"
-check "G: in an empty repo, worker still starts where it was launched" $?
+rc=$?
+is "$rc" -eq 1 && is "$(sessions_after "$n0")" -eq 0
+check "G: in an empty repo, worker does not start and crew run exits 1" $?
 is "$(grep -c '' "$t/g8.err")" -eq 1
 check "G: in an empty repo, exactly one line on stderr" $?
-head -n 1 "$t/g8.err" | grep -q '^crew:'
-check "G: that line is a crew: warning" $?
+grep -q '^crew: .*commit' "$t/g8.err"
+check "G: that line is a crew: line that asks for a first commit" $?
+# a plain directory where the worktree goes: the same refusal, naming the path
+g clone -q "$t/origin.git" "$t/wblock" || die "setup: project clone for the blocked worktree"
+mkdir -p "$t/wblock/.claude/worktrees/worker" || die "setup: directory in the way"
+n0=$(loglines)
+wrun "$t/wblock" worker >"$t/g8b.out" 2>"$t/g8b.err"
+rc=$?
+is "$rc" -eq 1 && is "$(sessions_after "$n0")" -eq 0 && is "$(grep -c '' "$t/g8b.err")" -eq 1 &&
+  grep -qF "crew: could not set up the worktree of worker at $t/wblock/.claude/worktrees/worker" "$t/g8b.err"
+check "G: with a directory in the way, worker does not start and crew run names the path" $?
 
 # an exclude file whose last line has no newline: the worktree's line goes on a line of its own
 g clone -q "$t/origin.git" "$t/wnl" || die "setup: project clone for the exclude file"

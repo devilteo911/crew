@@ -92,15 +92,17 @@ not ask before each edit, as it does under `.git/`. The first launch fetches for
 there is none), and adds `/.claude/worktrees/` to `.git/info/exclude`. Later
 launches reuse it as it is, branch and uncommitted changes included, and a
 launch from a subdirectory starts in the same subdirectory of it. Outside a git
-repo, or after the one `crew:` warning, the session starts in the current
-directory. The worktree has none of the git-ignored files: `/crew:implement`
-runs the project's setup there. A branch lives in one checkout at a time, so to
-resume in the worktree a branch the main checkout has checked out, switch the
-main checkout back to the target branch first. To remove the worktree, run
-`git worktree remove .claude/worktrees/<name>` from the main checkout, with
-`--force` to drop uncommitted changes; the next launch creates a fresh one. No
-shipped profile has the file yet. To try it, point `CREW_DIR` at a copy of
-`prompts/` with the file added: an untracked file in the managed clone's
+repo the session starts in the current directory. In a git repo it starts
+nowhere but its worktree: when `crew run` cannot make one, in a repo with no
+commit yet or with a directory in the way, it says why and starts nothing, and
+the next launch tries again. The worktree has none of the git-ignored files:
+`/crew:implement` runs the project's setup there. A branch lives in one checkout
+at a time, so to resume in the worktree a branch the main checkout has checked
+out, switch the main checkout back to the target branch first. To remove the
+worktree, run `git worktree remove .claude/worktrees/<name>` from the main
+checkout, with `--force` to drop uncommitted changes; the next launch creates a
+fresh one. No shipped profile has the file yet. To try it, point `CREW_DIR` at a
+copy of `prompts/` with the file added: an untracked file in the managed clone's
 `prompts/` makes its self-update fail once a later version ships the same path.
 
 `CREW_DIR` overrides the profiles directory, if you need to try another one.
