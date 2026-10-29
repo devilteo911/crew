@@ -148,7 +148,7 @@ the working tree: this runs before step 2 branches, and a worktree may still be 
 was last detached at, older than the dependencies.
 
 - the dependencies are **closed** on the tracker and their work is **in the base** of step 2
-  (`git log --oneline origin/<base> | grep '#<k>'`, or the files they were meant to create exist
+  (`git log --oneline origin/<base> | grep -F '(#<k>)'`, or the files they were meant to create exist
   there: `git cat-file -e origin/<base>:<path>`);
 - the hook points "created in #<k>" really exist, under the name the child expects
   (`git grep -n '<name>' origin/<base>`);
