@@ -286,8 +286,9 @@ Two phases are mandatory and always go at the end, in this order:
   what the issue promised should be visible. If the change touches the interface,
   also the keyboard check, the responsive layout and accessibility;
 - **the last is closing**: the documentation files that need rewriting, named one by
-  one, and the commit on the issue's branch. The MR/PR **is not a roadmap checkbox**: it is
-  opened by `/crew:close <number>` when all the phases are closed.
+  one, and the commit on the issue's branch. The review and the MR/PR **are not roadmap
+  checkboxes**: `/crew:review <number>` reviews the branch when all the phases are closed, and
+  `/crew:close <number>` opens the MR/PR after a passed review.
 
 A third is conditional: if `${user_config.figma_file}` is configured and the change touches the
 frontend, **the first phase is the Figma**. You work with the `figma:figma-use` skill and the
@@ -361,7 +362,8 @@ printed.
 ## Who runs the issue
 
 Not this skill: `/crew:implement <n>` picks it up, sends one phase per subagent and ticks
-the boxes as it goes; then `/crew:close <n>` verifies the final tree, opens the MR/PR and,
+the boxes as it goes; then `/crew:review <n>` reviews the branch tip and writes its verdict on the
+issue; after a passed review `/crew:close <n>` verifies the final tree, opens the MR/PR and,
 after the merge, closes the issue. Write the roadmap knowing that whoever reads it will be an
 agent that attended nothing — it is the reason the phases must be self-contained.
 

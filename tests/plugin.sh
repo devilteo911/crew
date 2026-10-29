@@ -3,7 +3,9 @@
 # both platforms. It covers kind, check, body get and the three guards of body put, state, comments,
 # create, close, list, and the mr commands (create, list, state, checks, merge); then the Stop hook
 # goal-stop.sh, run as Claude Code runs it, on top of the same stubs; then the PreToolUse guard
-# agent-guard.sh, fed the hook inputs of the two guarded agents and of everyone else.
+# agent-guard.sh, fed the hook inputs of the two guarded agents and of everyone else; then the review
+# gate review-gate.sh, run next to a stub tracker.sh that serves the issue's comments; last, a grep of
+# the skills' and agents' text for what Claude Code would substitute in it.
 # Run it from anywhere: sh tests/plugin.sh
 # Every assertion prints "ok <what>" or "FAIL <what>" and the run goes on; the exit status is 1 when
 # any FAIL was printed. Nothing outside the temp dir changes: HOME and PATH are replaced, stubs stand
@@ -643,6 +645,106 @@ rc=$?
 err=$(cat "$t/err")
 is "$rc,$out,$err" = "0,,"
 check "guard: without jq the call passes in silence" $?
+
+# =============================================================================================
+echo "== review-gate.sh"
+# a copy of the gate next to a stub tracker.sh that answers 'comment list 12' with $t/gate.json and nothing else
+mkdir -p "$t/gate/scripts" || die "setup: gate dir"
+cp "$src/plugins/crew/scripts/review-gate.sh" "$t/gate/scripts/" || die "setup: gate copy"
+cat >"$t/gate/scripts/tracker.sh" <<'EOF'
+#!/bin/sh
+[ "$*" = "comment list 12" ] || { echo "stub tracker.sh: unexpected call: $*" >&2; exit 9; }
+cat "$STUB_T/gate.json"
+EOF
+chmod +x "$t/gate/scripts/"*.sh
+OLD=89abcdef0123456789abcdef0123456789abcdef
+mark() { printf '<!-- crew:review verdict=%s sha=%s -->\nReview text.' "$1" "$2"; } # <verdict> <sha>: the body of a review comment
+comments() { jq -n '$ARGS.positional | map({body: ., createdAt: "2026-10-01T00:00:00Z"})' --args "$@" >"$t/gate.json"; } # <body>...: the issue's comments
+gate() { # [sha, the tip by default]: rc, out and err of one run of the gate's copy
+  out=$("$t/gate/scripts/review-gate.sh" 12 "${1:-$SHA}" 2>"$t/err")
+  rc=$?
+  err=$(cat "$t/err")
+}
+gate_passes() { # <what>: exit 0 and the line on stdout, nothing on stderr
+  is "$rc,$out,$err" = "0,review-gate: #12 passed review at 0123456,"
+  check "gate: $1 exits 0 and says so" $?
+}
+gate_refuses() { # <what> <text stderr must have>: exit 1, nothing on stdout, and the way out on stderr
+  is "$rc,$out" = "1," && has_text "$err" "$2" && has_text "$err" "/crew:review 12"
+  check "gate: $1 exits 1 and says '$2'" $?
+}
+
+comments "$(mark passed "$SHA")"
+gate
+gate_passes "a passed review at the tip"
+comments "$(mark passed "$OLD")"
+gate
+gate_refuses "a passed review at an older SHA" "the branch is at 0123456"
+comments "$(mark passed "$SHA")"
+gate "$(printf %.7s "$SHA")"
+gate_refuses "a passed review when the branch is given as a prefix of the reviewed SHA" "passed 0123456"
+comments "$(mark passed "$(printf %.7s "$SHA")")"
+gate
+gate_refuses "a passed review at a prefix of the tip" "passed 0123456"
+comments "$(mark changes-requested "$SHA")"
+gate
+gate_refuses "changes requested at the tip" "requested changes at 0123456"
+comments "$(mark maybe "$SHA")"
+gate
+gate_refuses "a verdict that is neither passed nor changes-requested" "cannot read"
+comments "$(printf '<!-- crew:review verdict=passed -->')"
+gate
+gate_refuses "a passed marker without a SHA" "cannot read"
+comments
+gate
+gate_refuses "no comments" "has no review"
+comments "plain words" "$(printf 'LGTM\n\n- [x] one')"
+gate
+gate_refuses "comments without the marker" "has no review"
+comments "$(mark passed "$SHA")" "$(mark changes-requested "$SHA")"
+gate
+gate_refuses "passed then changes requested at the tip: the latest wins" "requested changes"
+comments "$(mark changes-requested "$SHA")" "$(mark passed "$SHA")"
+gate
+gate_passes "changes requested then passed at the tip: the latest wins"
+comments "$(mark passed "$SHA")" "ordinary comment after the review"
+gate
+gate_passes "a review followed by an ordinary comment"
+comments "$(printf 'Looks fine to me.\n\n<!-- crew:review verdict=passed sha=%s -->' "$SHA")"
+gate
+gate_refuses "the marker quoted on the third line of an ordinary comment" "has no review"
+comments "$(printf '<!-- crew:review verdict=passed sha=%s -->\r\nReview text.\r\n' "$SHA")"
+gate
+gate_passes "a passed review at the tip with CRLF line endings"
+comments "$(mark passed "$SHA")"
+printf '%s\n' "not json" >"$t/gate.json"
+gate
+is "$rc" -ne 0 && is "$out" = "" && has_text "$err" "parse error"
+check "gate: JSON that does not parse exits non-zero, with jq's message" $?
+out=$("$t/gate/scripts/review-gate.sh" 12 2>"$t/err")
+rc=$?
+err=$(cat "$t/err")
+is "$rc" -ne 0 && is "$out" = "" && has_text "$err" "usage"
+check "gate: a missing <sha> exits non-zero with the usage" $?
+comments "$(mark passed "$SHA")"
+out=$(PATH="$t/nojq" "$t/gate/scripts/review-gate.sh" 12 "$SHA" 2>"$t/err")
+rc=$?
+err=$(cat "$t/err")
+is "$rc" -ne 0 && is "$out" = "" && has_text "$err" "jq"
+check "gate: without jq it exits non-zero, never 0" $?
+printf '#!/bin/sh\necho "tracker.sh: gh issue view 12 failed" >&2\nexit 1\n' >"$t/gate/scripts/tracker.sh"
+gate
+is "$rc" -ne 0 && is "$out" = "" && is "$err" = "tracker.sh: gh issue view 12 failed"
+check "gate: a tracker.sh that exits 1 makes it exit non-zero, with tracker.sh's message unchanged" $?
+
+# =============================================================================================
+echo "== skill and agent text"
+# Claude Code replaces a dollar sign followed by a digit with the skill's argument when it loads the
+# skill, inside code blocks too: awk's \$0 in /crew:review 11 read 11. The text must hold none.
+hits=$(grep -rn '\$[0-9]' "$src/plugins/crew/skills" "$src/plugins/crew/agents")
+is -z "$hits"
+check "text: no positional parameter in the skills and the agents" $?
+[ -z "$hits" ] || printf '%s\n' "$hits" | sed 's/^/# /'
 
 # =============================================================================================
 echo "plugin: $npass ok, $nfail FAIL"

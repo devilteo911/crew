@@ -245,6 +245,7 @@ Not with this skill. The children are executed **one at a time, in order**, with
 
 ```
 /crew:implement <child>            # or <mother>: takes the first child not yet merged
+/crew:review <child>               # reviews the branch tip; close refuses without a passed one
 /crew:close <child>                # opens the child's MR/PR
 /crew:close <child> --merged       # once merged: closes the child and ticks it on the mother
 ```
@@ -256,8 +257,10 @@ ticked.
 
 Or all at once with `/crew:big-implement <mother>`: the same round, one child at a time,
 on the mother branch — each child is born from there and goes back in with its MR/PR, which
-`close` merges on its own after the usual checks. At the end the mother's MR/PR carries
-everything into the target branch, and the user merges it; then `/crew:close <mother> --merged`.
+`close` merges on its own after the usual checks. At the end the children are in the mother
+branch without a review, so `/crew:review <mother>` reviews the whole branch before the mother's
+MR/PR opens: that MR/PR carries everything into the target branch, and the user merges it; then
+`/crew:close <mother> --merged`.
 
 If during execution a child discovers that the roadmap no longer holds — a decision of the
 mother turns out to be wrong, a later child has to be redone — the remedy is to fix the issues
