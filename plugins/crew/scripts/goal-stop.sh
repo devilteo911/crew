@@ -11,12 +11,17 @@
 #              big-implement — and its notification will wake the orchestrator
 #   blocks     how many times in a row the hook has blocked with the same state
 #
+# The issues are read through tracker.sh, next to this script, which alone knows GitHub from GitLab.
+#
 # When in doubt, let it stop (exit 0): a goal that cannot be verified must not turn into
-# an infinite loop.
+# an infinite loop. A missing tracker.sh, a remote that is neither platform, a CLI error: warn, exit 0.
 
 MAX_BLOCKS=5
 
 command -v jq >/dev/null 2>&1 || exit 0
+
+# absolute, and found before the cd below: this script may have been started by a relative path
+tracker="$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/tracker.sh"
 
 input=$(cat)
 cwd=$(jq -r '.cwd // empty' <<<"$input" 2>/dev/null)
@@ -32,18 +37,12 @@ warn() { echo "crew: $*" >&2; exit 0; }
 numbers=$(grep -o '[0-9]\+' "$dir/goal")
 [ -n "$numbers" ] || warn "$dir/goal holds no issue number: goal ignored"
 
-# same choice as TRACKER.md §1: the remote tells which tracker it is
-remote=$(git remote get-url origin 2>/dev/null)
-
 # sum the unchecked boxes of all the issues in the goal; remember the first one that has any
 unchecked=0
 first=""
 for number in $numbers; do
-  if [[ $remote == *github.com* ]]; then
-    body=$(gh issue view "$number" --json body --jq '.body' 2>/dev/null | sed 's/\r$//')
-  else
-    body=$(glab issue view "$number" --output json 2>/dev/null | jq -r '.description // empty')
-  fi
+  # </dev/null: the hook has already read its stdin, and no CLI may wait on it
+  body=$("$tracker" view "$number" </dev/null 2>/dev/null | jq -r '.body // empty')
   [ -n "$body" ] || warn "cannot read issue #$number from the tracker: goal not verified"
 
   # only the boxes of the Plan; without a Plan section, the whole body

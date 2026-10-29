@@ -16,7 +16,9 @@ Everything `plan` says holds here too, and is not repeated: `${CLAUDE_PLUGIN_ROO
 — the `plan` skill of this plugin — for the principle ("the issue must be executable by an
 agent that did not attend the conversation"), the host project, the reconnaissance, the phases,
 the checkboxes, how boxes get ticked and how to write. `${CLAUDE_PLUGIN_ROOT}/TRACKER.md` for the
-commands of the two platforms and their traps. **Read both before the first command.**
+vocabulary of the two platforms and their traps. **Read both before the first command.** The
+commands are `scripts/tracker.sh`, the only way to the tracker; below, `tracker.sh` stands for
+`"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh"`, and the blocks write it in full.
 
 ## Usage
 
@@ -77,8 +79,7 @@ have. The subagent starts clean, reads only what its issue needs, and hands you 
 
 ### 0. Which tracker, and does it answer
 
-Identical to step 0 of `plan`: `git remote get-url origin`, then `glab auth status` or
-`gh auth status` and an `issue list` that answers. If authentication is missing, stop and ask
+Identical to step 0 of `plan`: `tracker.sh check`. If authentication is missing, stop and ask
 the user to do it: it is interactive.
 
 ### 1. Work like in plan mode, without entering it
@@ -143,12 +144,11 @@ the children do not exist yet; you put the number in at step 8. The mother is op
 the children must be able to cite it from the very first moment.
 
 ```bash
-glab issue create --title "<title>" --description-file "$SCRATCH/mother.md" --yes   # GitLab
-gh   issue create --title "<title>" --body-file        "$SCRATCH/mother.md"         # GitHub
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" create "<title>" "$SCRATCH/mother.md"
 ```
 
 The mother's title says what the product gains when the project is finished, as for every issue.
-You read the number from the URL the command prints.
+You read the number from what `create` prints.
 
 ### 6. Write the children, one subagent per child
 
@@ -193,9 +193,15 @@ hand pieces of reconnaissance that you did not do.
 ### 8. Create the children and align the references
 
 Create the children **in the roadmap's order**, one at a time, so the numbers grow with the
-execution order. The title is the one in the roadmap; you read the number from the printed URL,
-you do not deduce it — on GitHub issues and pull requests share the sequence, and someone else
-may open an issue in the meantime.
+execution order:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" create "<title>" "$SCRATCH/child-<k>.md"
+```
+
+The title is the one in the roadmap; you read the number from what `create` prints, you do not
+deduce it — on GitHub issues and pull requests share the sequence, and someone else may open an
+issue in the meantime.
 
 Then the placeholders become numbers:
 
@@ -203,9 +209,18 @@ Then the placeholders become numbers:
   scope — `#(k)` becomes `#<number>`;
 - in the mother, the **Issues** section becomes `- [ ] #<number> title — what it delivers`.
 
-Every rewrite follows the usual rule: **re-read the body from the server**, replace, check that
-the file is not empty, send it back up (`TRACKER.md` §4). At the end, a `grep -n '#([0-9]\+)'` on
-every re-read body must find no placeholders left.
+Every rewrite is a `body get` of that issue, the replacement, and a `body put`:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body get <n> "$SCRATCH/issue-<n>.md"
+# replace every #(k) with #<number>
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body put <n> "$SCRATCH/issue-<n>.md"
+```
+
+`body put` refuses an empty file, an issue changed since the `body get`, and a file under half the
+body (`TRACKER.md` §4): on a refusal, `body get` again and redo the replacement, never force it. At
+the end, `body get` every issue once more and run `grep -n '#([0-9]\+)'` on the files: they must
+find no placeholders left.
 
 ### 9. Delivery
 

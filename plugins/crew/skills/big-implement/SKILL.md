@@ -6,7 +6,8 @@ hooks:
   Stop:
     - hooks:
         - type: command
-          command: "${CLAUDE_PLUGIN_ROOT}/scripts/goal-stop.sh"
+          command: "\"${CLAUDE_PLUGIN_ROOT}/scripts/goal-stop.sh\""
+          timeout: 60
 ---
 
 # /crew:big-implement
@@ -35,8 +36,10 @@ The execution rules are those of `implement` and `close` and are not repeated he
 `${CLAUDE_PLUGIN_ROOT}/skills/implement/SKILL.md` for the phases, the verification, the ticks, the
 commits and goal mode; `${CLAUDE_PLUGIN_ROOT}/skills/close/SKILL.md` for the final verification,
 the documentation, the MR/PR, the merge into the mother branch and the closing;
-`${CLAUDE_PLUGIN_ROOT}/TRACKER.md` for the commands of the two platforms. **Read all three
-before the first command.** Below there is only what changes.
+`${CLAUDE_PLUGIN_ROOT}/TRACKER.md` for the vocabulary and the traps of the two platforms. **Read
+all three before the first command.** The way to the tracker is `scripts/tracker.sh`, the only
+caller of `glab` and `gh`: the commands below write it as
+`"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh"`. Below there is only what changes.
 
 ## Usage
 
@@ -84,20 +87,20 @@ children to carry forward. The `- [x]` ones are already merged —
 into the mother branch or, from a round done by hand, into the target branch — and are not
 touched. For each child still to do, look on the tracker:
 
-- **the state**: if it is already closed but the box is empty, the mother has fallen behind —
-  flag it, do not re-run it, and treat it as merged;
+- **the state**: if `tracker.sh state <child>` says `closed` but the box is empty, the mother has
+  fallen behind — flag it, do not re-run it, and treat it as merged;
 - **the dependencies** — `· depends on #<k>` in the mother, `**Depends on:**` in the child:
   each one must be merged (box ticked or issue closed) **or** a child that this run carries
   forward **before** it. A dependency in neither case — an open external issue, a sibling that comes later in the order — is a roadmap
   that does not hold: stop and say so;
 - **whether it has already started** in a previous round: the branch
   `${user_config.branch_prefix}<n>` exists, has ticked checkboxes, already has an MR/PR
-  (`glab mr list --source-branch <branch>`, `gh pr list --head <branch>`). Resume from where it
+  (`tracker.sh mr list --head <branch>` is not empty). Resume from where it
   was left instead of starting over: from the first unticked phase, from the MR/PR if the
   phases are all done, from the merge if the MR/PR is open.
 
 Look at the **mother** too: if it already has an MR/PR open towards the target branch
-(`glab mr list --source-branch <mother-branch>`, `gh pr list --head <mother-branch>`), the
+(`tracker.sh mr list --head <mother-branch>` is not empty), the
 project is already delivered — say so and do not start again.
 
 Then present the chain to the user and start without asking for confirmation:
@@ -175,6 +178,9 @@ seen the conversation: **what you do not write to it does not exist**. In the pr
   `${CLAUDE_PLUGIN_ROOT}/skills/big-implement/SKILL.md` — for step 4.2, its round —,
   `${CLAUDE_PLUGIN_ROOT}/skills/implement/SKILL.md`, `${CLAUDE_PLUGIN_ROOT}/skills/close/SKILL.md`
   and `${CLAUDE_PLUGIN_ROOT}/TRACKER.md`;
+- the absolute plugin root, `${CLAUDE_PLUGIN_ROOT}`, next to those four paths: the runner reads
+  the files as plain files, where the variable is not substituted, and it makes every tracker
+  call through `<plugin root>/scripts/tracker.sh`;
 - the configuration values: `${user_config.branch_prefix}`, `${user_config.default_branch}`,
   `${user_config.verify_commands}`, `${user_config.docs_paths}`, `${user_config.figma_file}` —
   empty ones included, stated as empty;
@@ -243,14 +249,13 @@ server and on git:
 
 ```bash
 # the child's MR/PR is merged into the mother branch
-glab mr list --source-branch <branch> --target-branch <mother-branch> --merged   # GitLab
-gh   pr list --head <branch> --base <mother-branch> --state merged               # GitHub
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" mr list --head <branch> --base <mother-branch> --merged
 
 # the child is closed, with all the Plan boxes ticked
-glab issue view <child> --output json --jq '.state'    # "closed"
-gh   issue view <child> --json state --jq '.state'     # "CLOSED"
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" state <child>    # closed
 
 # its box is ticked on the mother: re-read the mother from the server
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body get <mother> "$SCRATCH/mother.md"
 
 # you are on the mother branch, clean and updated, with the child's commits in it
 git branch --show-current && git status --porcelain

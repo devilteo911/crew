@@ -16,12 +16,14 @@ the right door is `/crew:big-plan`, which defines the project roadmap and splits
 issues. It is not up to the user to notice: step 2 bis always checks, and if the request does
 not fit in one issue you stop, warn and propose how to proceed.
 
-The tracker is **GitLab** (`glab`) or **GitHub** (`gh`) depending on the remote, and the difference
-is only the command: `${CLAUDE_PLUGIN_ROOT}/TRACKER.md` — the `TRACKER.md` file in this plugin's
-folder — says which one is used here and how each command translates from one to the other.
-Read it before running the first command of the session: the commands below are given in both
-variants, but the traps (the body field that changes name, the `--limit` of
-`gh issue list`, the CRLFs) are there.
+The tracker is **GitLab** or **GitHub** depending on the remote, and `scripts/tracker.sh` is the
+only way to it: it deduces which from `origin`, calls `glab` or `gh` itself, and refuses the calls
+that would damage an issue. You never call the two CLIs yourself.
+`${CLAUDE_PLUGIN_ROOT}/TRACKER.md` — the `TRACKER.md` file in this plugin's folder — holds the
+vocabulary of the two platforms and their traps (the body field that changes name, the CRLFs, the
+timestamp that any write moves), and is to be read before the first command of the session. Below,
+`tracker.sh` stands for `"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh"`, and the blocks write it in
+full.
 
 ## Usage
 
@@ -73,19 +75,16 @@ holds for every issue to come.
 
 ### 0. Which tracker, and does it answer
 
-First thing, the platform: `git remote get-url origin` — `github` in the URL means `gh`,
-`gitlab` means `glab`. Then check that it really answers:
-
 ```bash
-glab auth status && glab issue list --all              # GitLab
-gh   auth status && gh   issue list --state all        # GitHub
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" check
 ```
 
-Authentication is interactive and **you cannot do it**: if it is missing, stop and ask the user to run
-`glab auth login --hostname gitlab.com` or `gh auth login --hostname github.com`. If instead the
-command gives a 404 or "could not determine base repo", the remote is an SSH alias, and the remedy is in
-`TRACKER.md` §2 — one line per platform. If the remote is neither GitHub nor GitLab, or the CLI
-that would be needed is not installed, stop and say so: an issue is not opened by hand.
+`check` exits 0 and prints `gh ok` or `glab ok` when the tracker the remote points to answers.
+Authentication is interactive and **you cannot do it**: if it is missing, stop and ask the user to
+run the `auth login` that `check` printed. If instead the repo does not resolve, the remote is an
+SSH alias, and the remedy `check` printed is the one in `TRACKER.md` §2. If the remote is neither
+GitHub nor GitLab, or the CLI that would be needed is not installed, `check` says so: stop and say
+so too, an issue is not opened by hand.
 
 ### 1. Work like in plan mode, without entering it
 
@@ -208,8 +207,8 @@ glance and the user answers in two seconds.
 ### 4. Title and branch
 
 The title says **what changes for whoever uses the product**, not which file is touched: a short
-sentence in lowercase, with no final period. The number is the one the tracker assigns, and it is read
-from the URL that the creation command prints.
+sentence in lowercase, with no final period. The number is the one the tracker assigns, and it is
+the one `create` prints.
 
 The working branch is `${user_config.branch_prefix}<issue number>` — with the default
 `issue-`, issue #12 is worked on `issue-12`.
@@ -220,12 +219,11 @@ Follow `TEMPLATE.md`, the file next to this one, which describes the sections on
 the body into a temporary file and create the issue from there:
 
 ```bash
-glab issue create --title "<title>" --description-file <file> --yes   # GitLab
-gh   issue create --title "<title>" --body-file        <file>         # GitHub
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" create "<title>" <file>
 ```
 
-The file avoids passing a long body through the shell's quotes. The assigned number is the one
-the command prints in the URL: read it from there, do not deduce it.
+The file avoids passing a long body through the shell's quotes, and `create` refuses an empty
+one. It prints the number of the new issue, and nothing else: read it from there, do not deduce it.
 
 ### 6. Delivery
 
@@ -298,29 +296,33 @@ The rule, which holds for the user as well as for you:
 The round to update it, which is also what `/crew:plan check <n>` does:
 
 ```bash
-# GitLab — the body field is called `description`
-glab issue view <n> --output json --jq '.description' > "$SCRATCH/roadmap.md"
-
-# GitHub — it is called `body`, and often arrives with CRLF terminators
-gh issue view <n> --json body --jq '.body' > "$SCRATCH/roadmap.md"
-sed -i 's/\r$//' "$SCRATCH/roadmap.md"
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body get <n> "$SCRATCH/roadmap.md"
 
 # flip the `- [ ]` that are done into `- [x]`, touch the **Status:** line if the phase is closed
 
-glab issue update <n> --description-file "$SCRATCH/roadmap.md"    # GitLab
-gh   issue edit   <n> --body-file        "$SCRATCH/roadmap.md"    # GitHub
+"${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body put <n> "$SCRATCH/roadmap.md"
 ```
 
-**Always re-read the body from the server before rewriting it**, never from a copy kept in the
-conversation. The update replaces the whole field and does not merge: if the user ticked
-a box from the page while you were working, rewriting an old version erases it.
-For the same reason, check that the file you just wrote is not empty: a `jq` on the
-wrong field gives `null`, and sending it back up empties the issue.
+**Always `body get` right before the edit**, never from a copy kept in the conversation. `body put`
+replaces the whole body and does not merge: if the user ticked a box from the page while you were
+working, rewriting an old version erases it. That is why it checks, and says which check failed:
 
-When all of an issue's checkboxes are ticked and the work is merged, it gets closed —
-`glab issue close <n>` or `gh issue close <n>` — and the **Status:** line is moved to
-`closed — merged on DD/MM/YYYY`. On GitHub it may have already closed by itself, if the PR carried
-`Closes #<n>`: look at the state before saying you closed it.
+- an empty file: the edit lost the body. Redo the edit from a fresh `body get`;
+- an issue that changed since `body get`: someone ticked a box, or something else wrote to the
+  issue. Run `body get` again, redo the change on the body that came back, and `body put` again.
+  **Never delete `roadmap.md.stamp` to force it**;
+- a file under half the size of the body: a tick and a status line never cut that much, so
+  something did. A `revise` that drops more than half the body **on purpose** passes `--shrink`
+  and tells the user that it did; otherwise find out what was cut.
+
+Any write on the issue moves its timestamp, so if you close it or comment on it, `body get` comes
+after that and not before.
+
+When all of an issue's checkboxes are ticked and the work is merged, it gets closed with
+`tracker.sh close <n>`, and then the **Status:** line is moved to `closed — merged on DD/MM/YYYY`,
+with a `body get` after the close, as above. On GitHub it may have already closed by itself, if the
+PR carried `Closes #<n>`: `close` then prints `already closed` and writes nothing. Say what it
+printed.
 
 ## Who runs the issue
 

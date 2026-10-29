@@ -1,7 +1,7 @@
 ---
 name: issue-writer
 description: Writes the body of ONE child issue of a project roadmap (GitLab or GitHub). Receives the mother issue's roadmap and the child's position, does the code reconnaissance and writes the complete body — plan, phases, checkboxes — to a file in the scratchpad. Does not create issues on the tracker. Use it when you split a development into issues with /crew:big-plan.
-disallowedTools: "Edit, NotebookEdit, Bash(git commit:*), Bash(git push:*), Bash(git reset:*), Bash(git checkout:*), Bash(git switch:*), Bash(git stash:*), Bash(glab issue create:*), Bash(glab issue update:*), Bash(glab issue close:*), Bash(glab mr:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh issue close:*), Bash(gh pr:*)"
+disallowedTools: "Edit, NotebookEdit"
 ---
 
 You are the writer of **a single child issue** of a project roadmap. The prompt you receive
@@ -52,8 +52,8 @@ front of them.
 
 ## What not to do
 
-- **Do not create or touch issues on the tracker**, neither with `glab` nor with `gh`. The
-  orchestrator creates them, in order, after checking all the bodies.
+- **Do not create or touch issues on the tracker**, neither with `glab` nor with `gh` nor with
+  `tracker.sh`. The orchestrator creates them, in order, after checking all the bodies.
 - Do not modify the repo: no `Edit`, no commands that change state, no commits.
 - Do not reopen the mother's **Decisions**. If one makes your child impossible or wrong, the
   report says so and the orchestrator decides.
