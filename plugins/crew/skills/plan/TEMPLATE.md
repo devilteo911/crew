@@ -45,6 +45,10 @@ must keep working, and what they will show.]
 **What stays as it is, and why.** [The adjacent code one is tempted to fix and that
 this issue does not touch — with the reason it does not touch it.]
 
+**Setup.** [Always present. The command a fresh clone needs before the verification commands can
+run — npm ci, uv sync — as the project's docs or CI give it, or "none". /crew:implement runs it in
+a git worktree, which has none of the git-ignored files.]
+
 ## Plan
 
 [The phases. Each one is a `###`, with a title that says what it does, and under it: a line naming the

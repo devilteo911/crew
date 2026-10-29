@@ -1,7 +1,8 @@
 # crew
 
 Opens a Claude Code session for every profile in `prompts/`, each in its own
-terminal window, all in the same working directory.
+terminal window, all in the same working directory; a profile with a `.worktree`
+file works in its own git worktree of it.
 
 ## Install
 
@@ -79,9 +80,31 @@ Adding a member means adding a `.md`: nothing to touch in the script.
 
 An optional `prompts/<name>.model` sets that session's model (`claude --model`):
 `sottoposto` runs on `opus`, `ciurma` on `sonnet`. No file, or an empty one,
-means Claude's default. `crew run` reads `<name>.md` and `<name>.model` at
-every start, so terminals and the keybinding pick up a change at the next
-launch.
+means Claude's default. `crew run` reads `<name>.md`, `<name>.model` and
+`<name>.worktree` at every start, so terminals and the keybinding pick up a
+change at the next launch.
+
+An optional `prompts/<name>.worktree`, an empty file whose contents are ignored,
+starts that session in its own git worktree: `.claude/worktrees/<name>` in the
+main checkout. It is the folder of `claude --worktree`, where Claude Code does
+not ask before each edit, as it does under `.git/`. The first launch fetches for
+5 s at most and creates the worktree detached at `origin/HEAD` (at `HEAD` when
+there is none), and adds `/.claude/worktrees/` to `.git/info/exclude`. Later
+launches reuse it as it is, branch and uncommitted changes included, and repair
+its links when the project folder has moved; a launch from a subdirectory starts
+in the same subdirectory of it. Outside a git repo the session starts in the
+current directory. In a git repo it starts nowhere but its worktree: when
+`crew run` cannot make one, in a repo with no commit yet or with a directory in
+the way, it says why and starts nothing, and the next launch tries again. The
+worktree has none of the git-ignored files: `/crew:implement` runs the project's
+setup there. A branch lives in one checkout at a time, so to resume in the
+worktree a branch the main checkout has checked out, switch the main checkout
+back to the target branch first. To remove the worktree, run
+`git worktree remove .claude/worktrees/<name>` from the main checkout, with
+`--force` to drop uncommitted changes; the next launch creates a fresh one. No
+shipped profile has the file yet. To try it, point `CREW_DIR` at a copy of
+`prompts/` with the file added: an untracked file in the managed clone's
+`prompts/` makes its self-update fail once a later version ships the same path.
 
 `CREW_DIR` overrides the profiles directory, if you need to try another one.
 

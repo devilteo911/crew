@@ -143,12 +143,17 @@ each child enters it on its own, and only the mother's MR/PR reaches the target 
 
 A child was written before the siblings it depends on were implemented: its `file:line`
 references and the hook points marked "created in #<k>" described code that is different now.
-Before delegating the first phase, check:
+Before delegating the first phase, check, after `git fetch origin`, in `origin/<base>` and not in
+the working tree: this runs before step 2 branches, and a worktree may still be at the commit it
+was last detached at, older than the dependencies.
 
 - the dependencies are **closed** on the tracker and their work is **in the base** of step 2
-  (`git log --oneline <base> | grep '#<k>'`, or the files they were meant to create exist);
-- the hook points "created in #<k>" really exist, under the name the child expects;
-- the `file:line` references of the first phase still point to what the issue describes.
+  (`git log --oneline origin/<base> | grep -F '(#<k>)'`, or the files they were meant to create exist
+  there: `git cat-file -e origin/<base>:<path>`);
+- the hook points "created in #<k>" really exist, under the name the child expects
+  (`git grep -n '<name>' origin/<base>`);
+- the `file:line` references of the first phase still point to what the issue describes
+  (`git show origin/<base>:<path>`).
 
 If something does not hold in a substantial way — a file that does not exist, an interface
 created with a different shape, a decision the sibling changed along the way — **stop** and
@@ -164,9 +169,25 @@ The work never touches the target branch — `${user_config.default_branch}`, or
 ```bash
 git status --porcelain                # must be empty: one commit per phase only makes sense
                                       # if the commit holds the phase and nothing else
-git switch <branch> 2>/dev/null \
-  || { git switch <base> && git pull --ff-only && git switch -c <branch>; }
+git fetch origin
+if git show-ref -q --verify refs/heads/<branch>; then
+  git switch <branch>                                  # resumed
+elif git show-ref -q --verify refs/remotes/origin/<branch>; then
+  git switch -c <branch> --track origin/<branch>       # started elsewhere
+else
+  git switch --no-track -c <branch> origin/<base>      # new: from the fetched base, never checked out
+fi
 ```
+
+The base is never checked out in order to branch from it, here or anywhere else in these skills.
+In a linked git worktree, such as the one `crew run` creates for a profile with a `.worktree`
+file, git refuses a branch that another checkout holds (`fatal: '<base>' is already checked out
+at '<path>'`), and the main checkout usually holds the target branch. `--no-track` keeps
+`origin/<base>` from becoming the new branch's upstream: `close` sets it with `git push -u`. If
+`git switch <branch>` itself gives that error, the branch is open in another checkout, which
+`git worktree list --porcelain` names: stop and say so. If the `git symbolic-ref` command above
+prints nothing, the clone has no `origin/HEAD`, and `git remote set-head origin --auto` sets it
+from the server.
 
 If there are uncommitted changes, stop and ask what to do with them.
 
@@ -181,7 +202,8 @@ The `rm` removes an `in-flight` left over from an interrupted session, which wou
 leave the goal permanently off.
 
 For a child of a big-plan, the branch is **always** created from the branch where the
-already-merged siblings are, freshly updated — the `git pull --ff-only` above:
+already-merged siblings are, freshly fetched — the `git fetch origin` above, so `<base>` in it
+is `origin/<base>`:
 
 - the **mother branch**, `${user_config.branch_prefix}<mother>`, if it exists on `origin`
   (`git ls-remote --exit-code --heads origin <mother-branch>`): the project is run by
@@ -189,6 +211,15 @@ already-merged siblings are, freshly updated — the `git pull --ff-only` above:
 - the target branch otherwise.
 
 Never from the branch of a sibling that is not merged yet.
+
+**A fresh worktree needs its setup.** A linked worktree has only the tracked files, none of the
+git-ignored ones such as `node_modules`, `.venv` or build output. Before delegating the first
+phase on a branch this step has just created, run the project's setup command once: the one the
+issue's **Context** names, otherwise the one the project's README, `CLAUDE.md` or CI runs before
+its tests. A folder set up for an earlier issue is not enough, since a sibling merged in between
+may have changed the dependencies. On a resumed branch, run it only if this folder lacks what the
+verification commands need. If no source names one and a verification fails for a missing
+dependency, stop and ask: a guessed setup installs the wrong thing.
 
 ## 3. The loop, one phase at a time
 

@@ -125,16 +125,22 @@ precisely from its existence on `origin`.
 ```bash
 git status --porcelain                 # must be empty
 git fetch origin
-git switch <mother-branch> 2>/dev/null \
-  || git switch -c <mother-branch> --track origin/<mother-branch> 2>/dev/null \
-  || { git switch <target> && git pull --ff-only && git switch -c <mother-branch>; }
+if git show-ref -q --verify refs/heads/<mother-branch>; then
+  git switch <mother-branch>                                    # resumed
+elif git show-ref -q --verify refs/remotes/origin/<mother-branch>; then
+  git switch -c <mother-branch> --track origin/<mother-branch>  # started elsewhere
+else
+  git switch --no-track -c <mother-branch> origin/<target>      # new: from the fetched target, never checked out
+fi
+# a branch from a previous round comes to origin's tip first, or its push is a rejected rewind
+! git show-ref -q --verify refs/remotes/origin/<mother-branch> || git merge --ff-only origin/<mother-branch>
 git push -u origin <mother-branch>
 ```
 
-If the branch already existed from a previous round, align it to `origin` with
-`git pull --ff-only`. If the target branch has moved on in the meantime, **do not** chase it: the
-mother branch is realigned only once, at step 5 — in `close` on the mother —, where a conflict
-is the user's decision.
+If the fast-forward fails, the local mother branch and `origin` diverged: stop and report it. If
+the target branch has moved on in the meantime, **do not** chase it: the mother branch is
+realigned only once, at step 5 — in `close` on the mother —, where a conflict is the user's
+decision.
 
 Bring the mother's **Status:** line to `in progress — k of M issues merged into <mother-branch>`.
 
@@ -207,15 +213,21 @@ The base of every child is the updated mother branch, **after** the previous sib
 
 ```bash
 git status --porcelain                 # must be empty
-git switch <branch> 2>/dev/null \
-  || { git switch <mother-branch> && git pull --ff-only && git switch -c <branch>; }
+git fetch origin
+if git show-ref -q --verify refs/heads/<branch>; then
+  git switch <branch>                                       # resumed
+elif git show-ref -q --verify refs/remotes/origin/<branch>; then
+  git switch -c <branch> --track origin/<branch>            # started elsewhere
+else
+  git switch --no-track -c <branch> origin/<mother-branch>  # new: from the fetched mother branch
+fi
 ```
 
-It is the rule of step 2 of `implement` with the mother branch in place of the target branch:
+It is the rule of step 2 of `implement`, the setup of a fresh worktree included, with the mother branch in place of the target branch:
 that is where the siblings already merged are. The check of step **1 ter** of `implement` is
 made against the mother branch: the dependencies are closed and their work is there
-(`git log --oneline <mother-branch> | grep '#<k>'`), and the hook points "created in #<k>" exist
-there. If they do not hold, you stop as `implement` says.
+(`git log --oneline origin/<mother-branch> | grep -F '(#<k>)'`), and the hook points "created in
+#<k>" exist there. If they do not hold, you stop as `implement` says.
 
 #### The phases
 
@@ -237,7 +249,9 @@ the closing of step 3 bis, which do not wait for the user. At the end:
 - the child's MR/PR is merged into the mother branch, and the child's branch is deleted;
 - the child is closed, with **Status:** `closed — merged into <mother-branch> on DD/MM/YYYY`;
 - its box on the mother is ticked, and the mother's **Status:** says `k of M`;
-- you are on the mother branch, updated: the next child is born from here.
+- you are at the tip of the mother branch, freshly fetched: on the branch in the main checkout,
+  detached at `origin/<mother-branch>` in a linked worktree (`close`, step 3 bis). The next child
+  is born from here.
 
 If `close` stops — an empty box, a red verification, a failed pipeline, an MR/PR that the server
 does not merge — the runner stops and writes it in the report.
@@ -257,10 +271,10 @@ server and on git:
 # its box is ticked on the mother: re-read the mother from the server
 "${CLAUDE_PLUGIN_ROOT}/scripts/tracker.sh" body get <mother> "$SCRATCH/mother.md"
 
-# you are on the mother branch, clean and updated, with the child's commits in it
-git branch --show-current && git status --porcelain
-git fetch origin && git status -sb | head -1              # no "behind"
-git log --oneline <mother-branch> | grep '(#<child>)'
+# you are clean, at the tip of the mother branch, with the child's commits in it
+git status --porcelain                                          # empty
+git fetch origin && git rev-parse HEAD origin/<mother-branch>   # the same SHA twice
+git log --oneline origin/<mother-branch> | grep '(#<child>)'
 ```
 
 If the runner stopped, or one of these checks does not come out right, the project stops: see
@@ -273,9 +287,21 @@ Then move on to the next child.
 
 ## 5. The mother's MR/PR
 
-When all the boxes of the mother's **Issues** section are ticked,
-`close` on the mother, in its "mother" case: it redoes the verification on the final tree of the
-mother branch, aligns the documentation, pushes and opens the MR/PR
+When all the boxes of the mother's **Issues** section are ticked, go to the mother branch, at
+the tip the children left on `origin`: in a linked worktree the last child left you detached,
+and `close` works only on the issue's branch.
+
+```bash
+git fetch origin
+git switch <mother-branch> && git merge --ff-only origin/<mother-branch>
+```
+
+If either fails — the branch is checked out somewhere else, or it and `origin/<mother-branch>`
+diverged — stop and report it. A local branch strictly ahead of `origin`, say after merging the
+target branch into it for a review, is fine: `--ff-only` leaves it as it is.
+
+Then `close` on the mother, in its "mother" case: it redoes the verification on the final tree
+of the mother branch, aligns the documentation, pushes and opens the MR/PR
 `mother branch → target branch` with `Closes #<mother>`. **Never the merge**: the user approves
 and merges this one, like every MR/PR towards the target branch.
 

@@ -54,15 +54,21 @@ things it needs are derived in this order:
 otherwise from the repo:
 
 ```bash
-git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##' \
-  || git branch --show-current
+git symbolic-ref --short refs/remotes/origin/HEAD | sed 's#^origin/##'
 ```
+
+If it prints nothing, the clone has no `origin/HEAD`, as in a repo created locally and pushed
+later: `git remote set-head origin --auto` sets it from the server.
 
 **The verification commands.** `${user_config.verify_commands}` if configured. If not, you derive
 them from the project during reconnaissance and **write them in the issue**, so the verification
 phase has real commands and not a generic "run the tests": the `package.json` scripts, the
 `Makefile` targets, `pyproject.toml`/`tox.ini`, the CI jobs in `.gitlab-ci.yml` or
 `.github/workflows/`. The project's `CLAUDE.md`, if there is one, almost always lists them already.
+Together with them, derive from the same sources the **setup command** that makes them runnable in
+a fresh clone (`npm ci`, `uv sync`, `make deps`), or note that there is none: it goes in the
+issue's **Context**, because the phases may run in a git worktree that has none of the git-ignored
+files.
 
 **What must be kept aligned at the end.** `${user_config.docs_paths}` if configured, otherwise
 the documentation files the project actually has — `README.md`, `docs/`, a changelog — and
@@ -94,8 +100,9 @@ and `/crew:implement` will implement it. The way of working is the same as plan
 mode, though, and holds from here until the issue is created:
 
 - **read-only.** Until step 5 you change nothing in the repo: no `Edit` or `Write`
-  on the project files, no commands that change state. You read, search, measure. The only
-  file you write is the issue body, in the scratchpad;
+  on the project files, no commands that change state, apart from `git fetch`,
+  `git remote set-head` and the tree of step 2, which touch only git's own refs and the scratchpad.
+  You read, search, measure. The only file you write is the issue body, in the scratchpad;
 - **ask the questions as you go.** The design forks of step 3 are put with
   `AskUserQuestion` as soon as the reconnaissance brings them up, as plan mode would: do not
   pile them up into one burst at the end, and do not leave them implicit;
@@ -116,6 +123,33 @@ summary and the approval question: the reconnaissance is done, do the check of s
 ### 2. Code reconnaissance — not skippable
 
 A request is an intention; the issue is an instruction. This step makes the difference.
+
+**You read the code at `origin/<base>`, in a tree of its own.** The issue's branch is cut from
+there (step 2 of `implement`), while the session's checkout may be behind it, on another branch,
+or carrying changes nobody pushed: a plan read there cites lines the implementer will not find.
+`<base>` is the target branch; for `revise <n>` of a child whose mother branch,
+`${user_config.branch_prefix}<mother>`, is on `origin`
+(`git ls-remote --exit-code --heads origin <mother-branch>`), it is the mother branch.
+
+```bash
+git fetch origin
+TREE=${SCRATCH:?}/tree                                   # stops if the scratchpad is not named
+rm -rf "$TREE"                                            # left over from an interrupted run
+git worktree add -q -f --detach "$TREE" "origin/<base>"   # -f: that one may still be registered
+```
+
+No `git worktree prune` here: it would also drop the entry of a profile's worktree whose project
+folder has moved, which `crew run` repairs at its next launch.
+
+Stop and say why if the fetch fails, since `origin/<base>` would be stale, or if there is no
+`origin/<base>`: nothing is pushed there yet, and the user pushes it first, with a first commit if
+the repo has none. From here on you read, search and measure in `$TREE`, and the issue's paths are
+relative to it. `$SCRATCH` is this session's scratchpad: if the shell does not keep variables
+between calls, write the tree's full path into every later command, the final removal included. When
+the skill ends, however it ends — the delivery, "Leave it", a stop — run
+`git worktree remove --force "$TREE"`; a switch to `/crew:big-plan` hands the tree over with the
+rest of the reconnaissance.
+
 **Before writing a line of plan:**
 
 - identify the files the change will touch and **really read them**, do not infer them from the names;

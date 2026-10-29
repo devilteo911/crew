@@ -106,7 +106,15 @@ rewritten to tell the truth. Do not tick them yourself to make the count add up.
 
 **The branch is the right one and has nothing pending.** The working branch is
 `${user_config.branch_prefix}<number>` — for the mother, the mother branch itself; the base is
-the one from step 0 bis.
+the one from step 0 bis. For the **mother**, first: in a linked worktree the last child's step
+3 bis leaves the session detached on the mother branch, and this brings it back, at the tip:
+
+```bash
+git fetch origin
+if [ -z "$(git branch --show-current)" ] && git merge-base --is-ancestor HEAD origin/<mother-branch>; then
+  git switch <mother-branch> && git merge --ff-only origin/<mother-branch>
+fi
+```
 
 ```bash
 git fetch origin
@@ -246,10 +254,26 @@ what it says. Why it merges the way it does is in `TRACKER.md` §5.
 **The closing**, without waiting for `--merged`: all of step 4 — the issue closed, the child's
 **Status:** to `closed — merged into <mother-branch> on DD/MM/YYYY`, the working branch deleted
 if the server has not already done it, and the box ticked on the mother as in "The mother, if
-the issue is a child". Locally you go back to the mother branch, updated:
+the issue is a child". Locally you go to the tip of the mother branch, freshly fetched (`<base>`
+below is the mother branch). A linked worktree must never take a branch the main checkout may
+need, so there you detach at `origin/<base>` instead of switching to it, and bring the local
+`<base>` to the same commit: whoever switches to it later — step 5 of `big-implement`, on the
+mother branch — lands on the tip, not on the commit the branch had when it was created. Only
+when no checkout has `<base>`: git before 2.36 would move a branch checked out elsewhere under
+that checkout's files, and the checkout that has it keeps it up to date itself.
 
 ```bash
-git switch <mother-branch> && git pull --ff-only
+git fetch origin
+if [ "$(git rev-parse --path-format=absolute --git-dir)" = "$(git rev-parse --path-format=absolute --git-common-dir)" ]; then
+  git switch <base> && git pull --ff-only     # the main checkout: back on the base, as before
+else
+  git switch --detach origin/<base>           # a linked worktree: the tip of the base, no branch taken
+  # the local <base> there too, unless a checkout has it
+  if git show-ref -q --verify refs/heads/<base> &&
+    ! git worktree list --porcelain | grep -qxF 'branch refs/heads/<base>'; then
+    git fetch -q origin <base>:<base> || :
+  fi
+fi
 ```
 
 ## 4. After the merge — `--merged`
@@ -268,11 +292,14 @@ is what you tell the user, not that you closed it.
 
 Then bring the **Status:** line to `closed — merged on DD/MM/YYYY`, with today's date — for the
 mother, `closed — completed on DD/MM/YYYY` — with the `body get` **after** the close, because the
-close moved the issue's timestamp, then the edit and `body put`. Locally: `git switch <base> &&
-git pull --ff-only`. The working branch is deleted only if the server has not already done it —
-`mr merge` deletes it for the child on the mother branch, GitLab does it for an MR opened by
-`mr create`, GitHub does it when the repo's "Automatically delete head branches" option is on —,
-and if none has removed it, `git push origin --delete <branch>`.
+close moved the issue's timestamp, then the edit and `body put`. Locally, only when
+`git branch --show-current` is this issue's working branch or `<base>`: the block at the end of
+step 3 bis, with this issue's `<base>`. On any other branch, or detached, leave the checkout
+alone: a linked worktree may already be on the next issue, with its work in progress. The
+working branch is deleted only if the server has not already done it — `mr merge` deletes it
+for the child on the mother branch, GitLab does it for an MR opened by `mr create`, GitHub does
+it when the repo's "Automatically delete head branches" option is on —, and if none has removed
+it, `git push origin --delete <branch>`.
 
 If the state of the MR/PR is not `merged`, close nothing and say so.
 

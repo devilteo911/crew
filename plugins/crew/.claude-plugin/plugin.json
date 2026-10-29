@@ -1,7 +1,7 @@
 {
   "name": "crew",
   "displayName": "crew",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "From the request to the merge request, by way of an issue that holds the plan and the roadmap that carries it out; for big developments, a project roadmap split into issues run in sequence; and, before anything else, a proposal of next steps read from the project's documentation. Works on GitLab (glab) and GitHub (gh).",
   "author": {
     "name": "Matteo Donato"
