@@ -293,12 +293,13 @@ is what you tell the user, not that you closed it.
 Then bring the **Status:** line to `closed — merged on DD/MM/YYYY`, with today's date — for the
 mother, `closed — completed on DD/MM/YYYY` — with the `body get` **after** the close, because the
 close moved the issue's timestamp, then the edit and `body put`. Locally, only when
-`git branch --show-current` is this issue's working branch: the block at the end of step 3 bis,
-with this issue's `<base>`. On any other branch, or detached, leave the checkout alone: a linked
-worktree may already be on the next issue, with its work in progress. The working branch is deleted only if the server has not
-already done it — `mr merge` deletes it for the child on the mother branch, GitLab does it for an
-MR opened by `mr create`, GitHub does it when the repo's "Automatically delete head branches"
-option is on —, and if none has removed it, `git push origin --delete <branch>`.
+`git branch --show-current` is this issue's working branch or `<base>`: the block at the end of
+step 3 bis, with this issue's `<base>`. On any other branch, or detached, leave the checkout
+alone: a linked worktree may already be on the next issue, with its work in progress. The
+working branch is deleted only if the server has not already done it — `mr merge` deletes it
+for the child on the mother branch, GitLab does it for an MR opened by `mr create`, GitHub does
+it when the repo's "Automatically delete head branches" option is on —, and if none has removed
+it, `git push origin --delete <branch>`.
 
 If the state of the MR/PR is not `merged`, close nothing and say so.
 
