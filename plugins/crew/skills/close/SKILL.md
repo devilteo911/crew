@@ -106,7 +106,15 @@ rewritten to tell the truth. Do not tick them yourself to make the count add up.
 
 **The branch is the right one and has nothing pending.** The working branch is
 `${user_config.branch_prefix}<number>` — for the mother, the mother branch itself; the base is
-the one from step 0 bis.
+the one from step 0 bis. For the **mother**, first: in a linked worktree the last child's step
+3 bis leaves the session detached on the mother branch, and this brings it back, at the tip:
+
+```bash
+git fetch origin
+if [ -z "$(git branch --show-current)" ] && git merge-base --is-ancestor HEAD origin/<mother-branch>; then
+  git switch <mother-branch> && git merge --ff-only origin/<mother-branch>
+fi
+```
 
 ```bash
 git fetch origin
