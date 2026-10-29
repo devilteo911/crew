@@ -122,9 +122,10 @@ open only the first issue, narrow the scope, or keep a single issue anyway.
 Each one picks up on its own after a `/clear`: the state lives in the issue's checkboxes, not in
 the conversation. `/crew:implement` without a number infers it from the current branch.
 
-The skills never check out the target branch. They create the issue's branch from
+The skills never check out the base to branch from it. They create the issue's branch from
 `origin/<base>` after a fetch, so they also run in a linked git worktree while the main checkout
-holds the target branch, and `implement` runs the project's setup in a fresh one.
+holds the target branch, and `implement` runs the project's setup in a fresh one. After a merge,
+`close` brings the main checkout back to the base and leaves a linked worktree detached at its tip.
 `/crew:plan` and `/crew:big-plan` read the code at `origin/<target branch>`, in a detached worktree
 of their own in the scratchpad, so a checkout that is behind, on another branch or carrying
 unpushed changes does not reach the plan.
