@@ -158,14 +158,16 @@ not cover the mother's pull request: the run stops at the review of the
 mother, the sottoposto runs `/crew:review <mother>`, and the pull request opens
 with `/crew:close <mother>` when you ask, as for any issue.
 
-`/crew:close` runs in the ciurma's worktree, which has the branch checked
-out. It opens a pull request towards the target branch only when
-`review-gate.sh` finds a passed review of the branch's last commit, so a
-commit after the review needs a new one. The installer is the one place
-that installs the plugins: a session that finds one missing says so once,
-and the sottoposto can still install crew itself on your yes. Without such
-a tracker, or if you decline crew, the sottoposto falls back to a plain plan
-session.
+`/crew:close` runs in the ciurma's worktree, which has the branch checked out.
+It opens a pull request towards the target branch only when `review-gate.sh`
+finds a passed review of the branch's last commit, so a commit after the
+review needs a new one. The installer is the one place that installs the
+plugins: a session that finds one missing says so once, and the sottoposto can
+still install crew itself on your yes. Without such a tracker, or if you
+decline crew, the sottoposto works without the crew skills: it asks whether to
+start a plan session in the ciurma and whether the ciurma should use
+subagents, then hands it the work one problem at a time and reviews it by
+hand.
 
 ## The crew plugin
 
