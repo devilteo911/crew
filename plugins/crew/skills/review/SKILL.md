@@ -265,8 +265,10 @@ in the log, and the mother's Out of scope held.
 
 ## 7. The comment
 
-First check that the branch still points at `$SHA`, with the `rev-parse` of step 2. If it does not,
-stop: the branch moved during the review, and the verdict would be about a commit nobody pushes.
+First check that the branch still points at `$SHA`, with the `rev-parse` of step 2, and that
+`git -C "$WT" status --porcelain` is still empty. If either fails, stop: the branch moved during the
+review, or the tree changed under the verification — someone edited it, or a command rewrote
+tracked files — and the verdict would be about something nobody pushes.
 
 The verdict is `passed` only when there is **no finding**; notes never block. Write the comment to
 `$SCRATCH/review-<number>.md`, in English whatever language the chat is in, and send it:
@@ -347,7 +349,7 @@ Stop and say why, instead of carrying on, if:
 - **step 4**: a verification command cannot run on this machine, including a fresh worktree whose
   setup no source names; `git merge-base` fails with anything but 0 or 1;
 - **step 5**: the `Skill` tool cannot run `code-review`;
-- **step 7**: the branch moved during the review.
+- **step 7**: the branch moved during the review, or its tree is no longer clean.
 
 Steps 1 and 2 stop before anything is written, so there is nothing to give back. Every stop from
 step 3 to step 7 does three things: it puts the Status line back (a fresh `body get` first), it
