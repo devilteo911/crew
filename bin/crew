@@ -102,6 +102,8 @@ into_worktree() { # <name>
     git rev-parse -q --verify "$ref^{commit}" >/dev/null || ref=HEAD
     # -f: a worktree deleted by hand, without git worktree remove, is still registered
     git worktree add -q -f --detach "$wt" "$ref" >/dev/null 2>&1 || return 1
+  else
+    git worktree repair "$wt" >/dev/null 2>&1 || :   # a moved project: the worktree's links still name the old path
   fi
   [ "$(git -C "$wt" rev-parse --show-toplevel 2>/dev/null)" = "$wt" ] && cd "$wt" || return 1
   sub=${sub%/}

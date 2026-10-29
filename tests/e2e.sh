@@ -528,6 +528,15 @@ is "$rc" -eq 1 && is "$(sessions_after "$n0")" -eq 0 && is "$(grep -c '' "$t/g8b
   grep -qF "crew: could not set up the worktree of worker at $t/wblock/.claude/worktrees/worker" "$t/g8b.err"
 check "G: with a directory in the way, worker does not start and crew run names the path" $?
 
+# a project moved after the first launch: its nested worktree still points at the old path
+g clone -q "$t/origin.git" "$t/wmove" || die "setup: project clone to move"
+wrun "$t/wmove" worker >/dev/null 2>&1
+mv "$t/wmove" "$t/wmoved" || die "setup: move the project"
+n0=$(loglines)
+wrun "$t/wmoved" worker >"$t/g8c.out" 2>"$t/g8c.err"
+new_has "$n0" "$(line_of "$t/wmoved/.claude/worktrees/worker" worker)" && is ! -s "$t/g8c.err"
+check "G: after the project moved, worker starts in its worktree at the new path" $?
+
 # an exclude file whose last line has no newline: the worktree's line goes on a line of its own
 g clone -q "$t/origin.git" "$t/wnl" || die "setup: project clone for the exclude file"
 printf '*.log' >"$t/wnl/.git/info/exclude"
