@@ -133,7 +133,7 @@ or carrying changes nobody pushed: a plan read there cites lines the implementer
 
 ```bash
 git fetch origin
-TREE=$SCRATCH/tree
+TREE=${SCRATCH:?}/tree                                   # stops if the scratchpad is not named
 rm -rf "$TREE"                                            # left over from an interrupted run
 git worktree add -q -f --detach "$TREE" "origin/<base>"   # -f: that one may still be registered
 ```
@@ -144,7 +144,9 @@ folder has moved, which `crew run` repairs at its next launch.
 Stop and say why if the fetch fails, since `origin/<base>` would be stale, or if there is no
 `origin/<base>`: nothing is pushed there yet, and the user pushes it first, with a first commit if
 the repo has none. From here on you read, search and measure in `$TREE`, and the issue's paths are
-relative to it. When the skill ends, however it ends — the delivery, "Leave it", a stop — run
+relative to it. `$SCRATCH` is this session's scratchpad: if the shell does not keep variables
+between calls, write the tree's full path into every later command, the final removal included. When
+the skill ends, however it ends — the delivery, "Leave it", a stop — run
 `git worktree remove --force "$TREE"`; a switch to `/crew:big-plan` hands the tree over with the
 rest of the reconnaissance.
 
