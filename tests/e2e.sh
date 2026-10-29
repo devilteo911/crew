@@ -528,6 +528,17 @@ is "$rc" -eq 1 && is "$(sessions_after "$n0")" -eq 0 && is "$(grep -c '' "$t/g8b
   grep -qF "crew: could not set up the worktree of worker at $t/wblock/.claude/worktrees/worker" "$t/g8b.err"
 check "G: with a directory in the way, worker does not start and crew run names the path" $?
 
+# a worktree git refuses to re-add (locked, its folder deleted by hand): git's reason reaches stderr
+g clone -q "$t/origin.git" "$t/wlock" || die "setup: project clone for the locked worktree"
+g -C "$t/wlock" worktree add -q --detach --lock "$t/wlock/.claude/worktrees/worker" >/dev/null 2>&1 || die "setup: locked worktree"
+rm -rf "$t/wlock/.claude/worktrees/worker" || die "setup: delete the locked worktree's folder"
+n0=$(loglines)
+wrun "$t/wlock" worker >"$t/g8d.out" 2>"$t/g8d.err"
+rc=$?
+is "$rc" -eq 1 && is "$(sessions_after "$n0")" -eq 0 && grep -q 'locked' "$t/g8d.err" &&
+  grep -qF "crew: could not set up the worktree of worker at $t/wlock/.claude/worktrees/worker" "$t/g8d.err"
+check "G: when git refuses the worktree, its reason and crew's line reach stderr" $?
+
 # a project moved after the first launch: its nested worktree still points at the old path
 g clone -q "$t/origin.git" "$t/wmove" || die "setup: project clone to move"
 wrun "$t/wmove" worker >/dev/null 2>&1

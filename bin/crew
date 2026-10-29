@@ -100,8 +100,9 @@ into_worktree() { # <name>
     fetch5 . || :   # offline: the origin/HEAD already here will do, the skills fetch before branching
     ref=origin/HEAD
     git rev-parse -q --verify "$ref^{commit}" >/dev/null || ref=HEAD
-    # -f: a worktree deleted by hand, without git worktree remove, is still registered
-    git worktree add -q -f --detach "$wt" "$ref" >/dev/null 2>&1 || return 1
+    git rev-parse -q --verify "$ref^{commit}" >/dev/null || return 1   # no commit: the caller says so
+    # -f: a worktree deleted by hand, without git worktree remove, is still registered; git's reason stays on stderr
+    git worktree add -q -f --detach "$wt" "$ref" >/dev/null || return 1
   else
     git worktree repair "$wt" >/dev/null 2>&1 || :   # a moved project: the worktree's links still name the old path
   fi
