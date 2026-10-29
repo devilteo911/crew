@@ -100,8 +100,9 @@ and `/crew:implement` will implement it. The way of working is the same as plan
 mode, though, and holds from here until the issue is created:
 
 - **read-only.** Until step 5 you change nothing in the repo: no `Edit` or `Write`
-  on the project files, no commands that change state, apart from the tree of step 2. You read,
-  search, measure. The only file you write is the issue body, in the scratchpad;
+  on the project files, no commands that change state, apart from `git fetch`,
+  `git remote set-head` and the tree of step 2, which touch only git's own refs and the scratchpad.
+  You read, search, measure. The only file you write is the issue body, in the scratchpad;
 - **ask the questions as you go.** The design forks of step 3 are put with
   `AskUserQuestion` as soon as the reconnaissance brings them up, as plan mode would: do not
   pile them up into one burst at the end, and do not leave them implicit;
