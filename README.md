@@ -80,8 +80,8 @@ crew run sottoposto  # starts one profile in the current directory
 crew --version       # prints the version (also -V)
 ```
 
-`run` as the first argument is the subcommand; to open the crew in a directory
-named `run`, use `crew ./run`.
+`run`, `-V` and `--version` as the first argument are commands; to open the crew
+in a directory with one of those names, put `./` before it, as in `crew ./run`.
 
 ## Profiles
 
