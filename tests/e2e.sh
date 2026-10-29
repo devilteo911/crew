@@ -518,15 +518,16 @@ is "$(grep -c '' "$t/g8.err")" -eq 1
 check "G: in an empty repo, exactly one line on stderr" $?
 grep -q '^crew: .*commit' "$t/g8.err"
 check "G: that line is a crew: line that asks for a first commit" $?
-# a plain directory where the worktree goes: the same refusal, naming the path
+# a plain directory where the worktree goes: the same refusal, naming the path and what to do
 g clone -q "$t/origin.git" "$t/wblock" || die "setup: project clone for the blocked worktree"
 mkdir -p "$t/wblock/.claude/worktrees/worker" || die "setup: directory in the way"
 n0=$(loglines)
 wrun "$t/wblock" worker >"$t/g8b.out" 2>"$t/g8b.err"
 rc=$?
-is "$rc" -eq 1 && is "$(sessions_after "$n0")" -eq 0 && is "$(grep -c '' "$t/g8b.err")" -eq 1 &&
+is "$rc" -eq 1 && is "$(sessions_after "$n0")" -eq 0 &&
+  grep -qF "crew: $t/wblock/.claude/worktrees/worker is in the way, not a worktree of this repo: move it aside" "$t/g8b.err" &&
   grep -qF "crew: could not set up the worktree of worker at $t/wblock/.claude/worktrees/worker" "$t/g8b.err"
-check "G: with a directory in the way, worker does not start and crew run names the path" $?
+check "G: with a directory in the way, worker does not start and crew run says to move it aside" $?
 
 # a worktree git refuses to re-add (locked, its folder deleted by hand): git's reason reaches stderr
 g clone -q "$t/origin.git" "$t/wlock" || die "setup: project clone for the locked worktree"

@@ -106,7 +106,9 @@ into_worktree() { # <name>
   else
     git worktree repair "$wt" >/dev/null 2>&1 || :   # a moved project: the worktree's links still name the old path
   fi
-  [ "$(git -C "$wt" rev-parse --show-toplevel 2>/dev/null)" = "$wt" ] && cd "$wt" || return 1
+  [ "$(git -C "$wt" rev-parse --show-toplevel 2>/dev/null)" = "$wt" ] ||
+    { echo "crew: $wt is in the way, not a worktree of this repo: move it aside, then run crew again" >&2; return 1; }
+  cd "$wt" || return 1
   sub=${sub%/}
   if [ -n "$sub" ] && [ -d "$sub" ]; then cd "./$sub"; fi   # ./: never through an exported CDPATH
 }
