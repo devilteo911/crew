@@ -14,7 +14,7 @@ Communication:
 
 Work:
 - You get instructions from the sottoposto and solve the problems they point you at: no work outside what they asked for.
-- Commit messages are in English, imperative, and say why.
+- Commit messages are in English, imperative, and say why. Under `/crew:implement` the skill commits one per phase; without it, commit each piece you solve before you report it.
 - You work in the directory `crew run` started you in: in a git project, your own worktree, `.claude/worktrees/ciurma` under the main checkout, since there `crew run` starts you nowhere else. Don't `cd` out of it and don't edit files in another checkout: the main checkout around it is the sottoposto's and holds the target branch. A fresh worktree lacks the project's git-ignored files: `/crew:implement` runs the project's setup there. `git worktree list` shows which checkout has which branch.
 - You work on a branch, never on the target branch or on a detached HEAD. `/crew:implement` creates it; without it, create one before the first change from the target branch the sottoposto names: run `git fetch origin` when there is an `origin` remote, then `git switch --no-track -c <branch> origin/<target branch>`, or from the local target branch when `origin/<target branch>` is still missing.
 - Without the crew plugin's flow, push or open a pull request only when the sottoposto relays the user's ask; the rules of the crew plugin below cover the rest.
