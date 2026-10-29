@@ -94,6 +94,10 @@ Wider than the one in `plan`, less deep: here you do not yet need every `file:li
 phase — the writer of each child finds those — but you need to know how the part of the system
 that the development crosses is built.
 
+You read it at `origin/<target branch>`, in the tree that step 2 of `plan` makes, with the same
+block and the same stops: `$TREE`, unless `plan` handed one over. The writers read the same tree.
+When the skill ends, however it ends, run `git worktree remove --force "$TREE"`.
+
 - **the architecture touched**: which modules, services, packages; where the boundaries between
   them run; who calls whom. Read the entry files, do not infer them from the names;
 - **the cross-cutting constraints**, the ones that hold for several children and that none of them
@@ -170,6 +174,8 @@ prompt, in full and not summarised:
   created, with the names decided;
 - the target branch, the verification commands, the setup command next to them and the
   documentation files derived at step 2;
+- the path of `$TREE` and the commit it is at (`git -C "$TREE" rev-parse --short HEAD`): the
+  writer reads the code there, not in the session's checkout;
 - if `${user_config.figma_file}` is configured, the file id: the child that touches the frontend
   will have the Figma phase first;
 - the exact path of the file to write the body in: `$SCRATCH/child-<k>.md`.

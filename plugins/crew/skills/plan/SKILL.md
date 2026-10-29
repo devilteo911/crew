@@ -54,9 +54,11 @@ things it needs are derived in this order:
 otherwise from the repo:
 
 ```bash
-git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##' \
-  || git branch --show-current
+git symbolic-ref --short refs/remotes/origin/HEAD | sed 's#^origin/##'
 ```
+
+If it prints nothing, the clone has no `origin/HEAD`, as in a repo created locally and pushed
+later: `git remote set-head origin --auto` sets it from the server.
 
 **The verification commands.** `${user_config.verify_commands}` if configured. If not, you derive
 them from the project during reconnaissance and **write them in the issue**, so the verification
@@ -98,8 +100,8 @@ and `/crew:implement` will implement it. The way of working is the same as plan
 mode, though, and holds from here until the issue is created:
 
 - **read-only.** Until step 5 you change nothing in the repo: no `Edit` or `Write`
-  on the project files, no commands that change state. You read, search, measure. The only
-  file you write is the issue body, in the scratchpad;
+  on the project files, no commands that change state, apart from the tree of step 2. You read,
+  search, measure. The only file you write is the issue body, in the scratchpad;
 - **ask the questions as you go.** The design forks of step 3 are put with
   `AskUserQuestion` as soon as the reconnaissance brings them up, as plan mode would: do not
   pile them up into one burst at the end, and do not leave them implicit;
@@ -120,6 +122,28 @@ summary and the approval question: the reconnaissance is done, do the check of s
 ### 2. Code reconnaissance — not skippable
 
 A request is an intention; the issue is an instruction. This step makes the difference.
+
+**You read the code at `origin/<base>`, in a tree of its own.** The issue's branch is cut from
+there (step 2 of `implement`), while the session's checkout may be behind it, on another branch,
+or carrying changes nobody pushed: a plan read there cites lines the implementer will not find.
+`<base>` is the target branch; for `revise <n>` of a child whose mother branch,
+`${user_config.branch_prefix}<mother>`, is on `origin`
+(`git ls-remote --exit-code --heads origin <mother-branch>`), it is the mother branch.
+
+```bash
+git fetch origin
+TREE=$SCRATCH/tree
+git worktree remove --force "$TREE" 2>/dev/null; git worktree prune   # left over from an interrupted run
+git worktree add -q --detach "$TREE" "origin/<base>"
+```
+
+Stop and say why if the fetch fails, since `origin/<base>` would be stale, or if there is no
+`origin/<base>`: nothing is pushed there yet, and the user pushes it first, with a first commit if
+the repo has none. From here on you read, search and measure in `$TREE`, and the issue's paths are
+relative to it. When the skill ends, however it ends — the delivery, "Leave it", a stop — run
+`git worktree remove --force "$TREE"`; a switch to `/crew:big-plan` hands the tree over with the
+rest of the reconnaissance.
+
 **Before writing a line of plan:**
 
 - identify the files the change will touch and **really read them**, do not infer them from the names;

@@ -25,14 +25,15 @@ front of them.
 
 ## What to do
 
-1. **Reconnaissance of the code as it is today**, for your child only: the files it will touch
-   really read, the `path/file.ts:42` references verified, the numbers measured and not
-   estimated, the implicit constraints found. It is your job, not the mother's: the mother gives
-   you the direction, you find the lines.
+1. **Reconnaissance of the code as it is today**, for your child only, in the tree the prompt
+   names — `origin/<target branch>`, checked out for this planning — and not in the session's
+   checkout: the files it will touch really read, the `path/file.ts:42` references verified, the
+   numbers measured and not estimated, the implicit constraints found. It is your job, not the
+   mother's: the mother gives you the direction, you find the lines.
 2. **What does not exist yet.** If your child relies on code that the children before it will
    create, cite it as the mother describes it — the file, the type, the endpoint, with the name
    decided — and mark it "created in #(k)". **Do not invent lines** of files that do not exist:
-   a cited `file.ts:42` must exist today.
+   a cited `file.ts:42` must exist in that tree.
 3. **Write the body**, in English, following the `plan` template, with at the top, under
    **Status:** and **Planned branch:**:
 

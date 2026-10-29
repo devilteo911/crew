@@ -125,6 +125,9 @@ the conversation. `/crew:implement` without a number infers it from the current 
 The skills never check out the target branch. They create the issue's branch from
 `origin/<base>` after a fetch, so they also run in a linked git worktree while the main checkout
 holds the target branch, and `implement` runs the project's setup in a fresh one.
+`/crew:plan` and `/crew:big-plan` read the code at `origin/<target branch>`, in a detached worktree
+of their own in the scratchpad, so a checkout that is behind, on another branch or carrying
+unpushed changes does not reach the plan.
 
 `/crew:implement` and `/crew:big-implement` do not need `/goal`: they carry a `Stop`
 hook (`scripts/goal-stop.sh`) that at every turn end re-reads the issue from the tracker and
